@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+dist-server/
+coverage/
+.DS_Store
+*.log
+*.swp
+screenlog*
+.playwright-cli/
+output/
+tmp/
+*.zip
+.env*
+!.env.example
