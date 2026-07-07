@@ -1,4 +1,4 @@
-import { GoogleGenAI, SubjectReferenceImage, SubjectReferenceType } from '@google/genai';
+import { createPartFromBase64, GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'node:fs/promises';
@@ -30,7 +30,7 @@ const devServerMeta = {
   hasApiKey: Boolean(getApiKey()),
 };
 
-const imageEditModel = process.env.GEMINI_IMAGE_EDIT_MODEL ?? 'imagen-3.0-capability-001';
+const imageEditModel = process.env.GEMINI_IMAGE_EDIT_MODEL ?? 'gemini-2.5-flash-image';
 
 const conceptPrompts: Record<string, string> = {
   classic:
@@ -125,35 +125,34 @@ async function generatePortrait(imageDataUrl: string, conceptId: string, note?: 
 
   const image = dataUrlToImage(imageDataUrl);
   const ai = new GoogleGenAI({ apiKey });
-  const subjectReference = new SubjectReferenceImage();
-  subjectReference.referenceImage = image;
-  subjectReference.config = {
-    subjectType: SubjectReferenceType.SUBJECT_TYPE_ANIMAL,
-    subjectDescription: 'The original pet photo. Preserve breed cues, facial markings, and expression.',
-  };
-
-  const response = await ai.models.editImage({
+  const response = await ai.models.generateContent({
     model: imageEditModel,
-    prompt: buildPrompt(conceptId, note),
-    referenceImages: [subjectReference],
+    contents: [
+      {
+        text: `${buildPrompt(
+          conceptId,
+          note,
+        )} Use the uploaded pet photo as the only visual reference. Preserve breed cues, markings, eye color, pose, and expression. ${negativePrompt}`,
+      },
+      createPartFromBase64(image.imageBytes, image.mimeType),
+    ],
     config: {
-      aspectRatio: getAspectRatio(sizeId),
-      includeRaiReason: true,
-      negativePrompt,
-      numberOfImages: 1,
-      outputMimeType: 'image/png',
+      responseModalities: ['IMAGE'],
+      imageConfig: {
+        aspectRatio: getAspectRatio(sizeId),
+        imageSize: '1K',
+      },
     },
   });
+  const generatedImage = response.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data)?.inlineData;
 
-  const generatedImage = response.generatedImages?.find((candidate) => candidate.image?.imageBytes);
-
-  if (!generatedImage?.image?.imageBytes) {
-    const filteredReason = response.generatedImages?.[0]?.raiFilteredReason;
-    throw new Error(filteredReason ? `Image generation was blocked: ${filteredReason}` : 'The model did not return an image.');
+  if (!generatedImage?.data) {
+    const textResponse = response.text?.trim();
+    throw new Error(textResponse || 'The model did not return an image.');
   }
 
   return {
-    imageDataUrl: `data:${generatedImage.image.mimeType ?? 'image/png'};base64,${generatedImage.image.imageBytes}`,
+    imageDataUrl: `data:${generatedImage.mimeType ?? 'image/png'};base64,${generatedImage.data}`,
     model: imageEditModel,
     isMock: false,
   };
