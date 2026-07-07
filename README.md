@@ -28,6 +28,10 @@ The dev helper script always replaces any older process on the same port, writes
 - `npm run build`: Create the production client bundle and server bundle
 - `npm run preview`: Build and serve the production bundle
 
+If you only want to test the flow without spending image-generation quota, set
+`PIKTURA_FORCE_MOCK_GENERATION=true`. The app will return built-in mock preview
+images instead of calling Gemini.
+
 ## Deploy on Render
 
 This repo includes a `render.yaml` blueprint for a Node web service.
@@ -38,3 +42,6 @@ This repo includes a `render.yaml` blueprint for a Node web service.
 4. Deploy
 
 The production server reads environment variables from Render directly. For local development it will also load `.env.local` and `.env` from the project root.
+
+If you want Render to run in demo mode without real image generation, set
+`PIKTURA_FORCE_MOCK_GENERATION=true` in Render Environment and redeploy.

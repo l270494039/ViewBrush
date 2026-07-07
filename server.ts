@@ -16,6 +16,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const host = process.env.HOST ?? (isProduction ? '0.0.0.0' : '127.0.0.1');
 const port = Number(process.env.PORT ?? (isProduction ? 10000 : 3000));
 const disableHmr = process.env.DISABLE_HMR === 'true';
+const forceMockGeneration = process.env.PIKTURA_FORCE_MOCK_GENERATION === 'true';
 const startedAt = new Date().toISOString();
 const workspaceName = path.basename(appRoot);
 const devServerMeta = {
@@ -28,6 +29,7 @@ const devServerMeta = {
   isProduction,
   disableHmr,
   hasApiKey: Boolean(getApiKey()),
+  forceMockGeneration,
 };
 
 const imageEditModel = process.env.GEMINI_IMAGE_EDIT_MODEL ?? 'gemini-2.5-flash-image';
@@ -147,6 +149,14 @@ function getProviderErrorMessage(error: unknown) {
 }
 
 async function generatePortrait(imageDataUrl: string, conceptId: string, note?: string, sizeId?: string) {
+  if (forceMockGeneration) {
+    return {
+      imageDataUrl: await getMockPortrait(conceptId),
+      model: 'mock-preview',
+      isMock: true,
+    };
+  }
+
   const apiKey = getApiKey();
 
   if (!apiKey) {
