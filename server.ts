@@ -108,6 +108,44 @@ function getAspectRatio(sizeId?: string) {
   return '4:5';
 }
 
+function getProviderErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return 'Failed to generate portrait.';
+  }
+
+  const rawMessage = error.message?.trim();
+  if (!rawMessage) {
+    return 'Failed to generate portrait.';
+  }
+
+  try {
+    const parsed = JSON.parse(rawMessage) as {
+      error?: {
+        code?: number;
+        message?: string;
+        status?: string;
+      };
+    };
+    const providerMessage = parsed.error?.message?.trim();
+
+    if (parsed.error?.code === 429 || providerMessage?.includes('Quota exceeded')) {
+      return 'Image generation is temporarily unavailable because the configured Gemini image model has no quota available. In Render, update the Gemini API key/project billing or switch the image model setting.';
+    }
+
+    if (providerMessage) {
+      return providerMessage;
+    }
+  } catch {
+    // Keep the original message when the provider payload is not JSON.
+  }
+
+  if (rawMessage.includes('Quota exceeded')) {
+    return 'Image generation is temporarily unavailable because the configured Gemini image model has no quota available. In Render, update the Gemini API key/project billing or switch the image model setting.';
+  }
+
+  return rawMessage;
+}
+
 async function generatePortrait(imageDataUrl: string, conceptId: string, note?: string, sizeId?: string) {
   const apiKey = getApiKey();
 
@@ -176,7 +214,7 @@ app.post('/api/generate-portrait', async (req, res) => {
     const portrait = await generatePortrait(imageDataUrl, conceptId, note, sizeId);
     res.json(portrait);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to generate portrait.';
+    const message = getProviderErrorMessage(error);
     console.error('[generate-portrait]', error);
     res.status(500).json({ error: message });
   }
