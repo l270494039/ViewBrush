@@ -36,6 +36,7 @@ export default function Footer({
         <div className="lg:col-span-2">
           <h3 className={`mb-6 font-semibold ${getHeadingFont()}`}>Support</h3>
           <ul className="space-y-4 text-sm opacity-60">
+            <li><button type="button" onClick={() => onNavigate('faq')} className="hover:opacity-100 transition-opacity">Contact Us</button></li>
             <li><button type="button" onClick={() => onNavigate('refund')} className="hover:opacity-100 transition-opacity">Refund Policy</button></li>
             <li><button type="button" onClick={() => onNavigate('faq')} className="hover:opacity-100 transition-opacity">Shipping FAQ</button></li>
             <li><button type="button" onClick={() => onNavigate('refund')} className="hover:opacity-100 transition-opacity">Revisions & Returns</button></li>

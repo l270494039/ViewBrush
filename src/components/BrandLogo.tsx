@@ -1,6 +1,6 @@
 import React from 'react';
 
-import lockup from '../assets/branding/viewbrush-lockup-temp.png';
+import lockup from '../assets/branding/viewbrush-logo-full-20260713.webp';
 
 type BrandLogoVariant = 'nav' | 'footer';
 
@@ -19,7 +19,7 @@ export default function BrandLogo({
         src={lockup}
         alt={logoAlt}
         aria-hidden={decorative ? 'true' : undefined}
-        className="h-[36px] w-auto object-contain"
+        className="h-[34px] w-auto object-contain md:h-[40px]"
       />
     );
   }
@@ -29,7 +29,7 @@ export default function BrandLogo({
       src={lockup}
       alt={logoAlt}
       aria-hidden={decorative ? 'true' : undefined}
-      className="h-[33px] w-auto object-contain md:h-[36px]"
+      className="h-[28px] w-auto object-contain md:h-[32px]"
     />
   );
 }

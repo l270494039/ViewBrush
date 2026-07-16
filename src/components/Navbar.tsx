@@ -41,7 +41,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
     <>
       <nav className="fixed top-0 z-40 w-full border-b border-[#D8CDBB] bg-[#F6F0E7]/92 backdrop-blur-md transition-all duration-300">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6">
-          <div className="flex min-w-0 flex-1 items-center">
+          <div className="flex min-w-0 items-center">
             <button
               type="button"
               aria-label="Go to ViewBrush home"
@@ -53,7 +53,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             </button>
           </div>
 
-          <ul className="hidden flex-1 items-center justify-center gap-6 text-sm font-medium lg:flex">
+          <ul className="ml-auto hidden items-center justify-end gap-6 pr-8 text-sm font-medium lg:flex">
             {navItems.map((item) => (
               <li key={item.label}>
                 <button
@@ -63,8 +63,8 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
                     'route' in item && item.route === currentRoute
                       ? 'text-[#31271F]'
                       : 'route' in item
-                        ? 'text-[#6B6155] hover:text-[#31271F]'
-                        : 'text-[#6B6155] hover:text-[#31271F]'
+                        ? 'text-[#6B6155]/70 hover:text-[#31271F]'
+                        : 'text-[#6B6155]/70 hover:text-[#31271F]'
                   }`}
                 >
                   {item.label}
@@ -73,7 +73,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             ))}
           </ul>
 
-          <div className="flex flex-1 items-center justify-end gap-2.5 md:gap-4">
+          <div className="flex items-center justify-end gap-2.5 md:gap-4">
             <button
               type="button"
               aria-label="Account"

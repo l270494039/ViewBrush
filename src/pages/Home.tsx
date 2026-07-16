@@ -3,23 +3,23 @@ import { motion } from 'motion/react';
 import { ArrowRight, Brush, Frame, Package, Star, SwatchBook } from 'lucide-react';
 
 import imgHero from '../assets/images/main_golden_oil_1780093879389.png';
-import imgHeroClassicOriginal from '../assets/images/hero_classic_italian_greyhound_original_20260704.png';
-import imgHeroClassic from '../assets/images/hero_classic_italian_greyhound_stylized_20260704.png';
-import imgHeroImpressionistOriginal from '../assets/images/hero_impressionist_cavalier_original_20260703.png';
-import imgHeroImpressionist from '../assets/images/hero_impressionist_cavalier_stylized_20260703.png';
-import imgHeroAcrylicOriginal from '../assets/images/hero_acrylic_shiba_original_20260703.png';
-import imgHeroAcrylic from '../assets/images/hero_acrylic_shiba_stylized_20260703.png';
-import imgHeroWarmOriginal from '../assets/images/hero_warm_bernese_original_20260703.png';
-import imgHeroWarm from '../assets/images/hero_warm_bernese_stylized_20260703.png';
+import imgHeroClassicOriginal from '../assets/images/landing-hero-20260715/landing-hero0-1-min.webp';
+import imgHeroClassic from '../assets/images/landing-hero-20260715/landing-hero0-2-min.webp';
+import imgHeroImpressionistOriginal from '../assets/images/landing-hero-20260715/landing-hero1-1-min.webp';
+import imgHeroImpressionist from '../assets/images/landing-hero-20260715/landing-hero1-2-min.webp';
+import imgHeroAcrylicOriginal from '../assets/images/landing-hero-20260715/landing-hero2-1-min.webp';
+import imgHeroAcrylic from '../assets/images/landing-hero-20260715/landing-hero2-2-min.webp';
+import imgHeroWarmOriginal from '../assets/images/landing-hero-20260715/landing-hero3-1-min.webp';
+import imgHeroWarm from '../assets/images/landing-hero-20260715/landing-hero3-2-min.webp';
 import imgHeroBg from '../assets/images/hero_painting_gallery_minimal_20260530.png';
 import imgMomentsGirlDog from '../assets/images/moments_girl_dog_1780095649363.png';
-import imgProcessUpload from '../assets/images/process_upload_golden_living_room_20260704.png';
 import imgMaterialPaints from '../assets/images/materials_oil_paints_20260530.png';
 import imgMaterialCanvas from '../assets/images/materials_cotton_canvas_20260530.png';
 import imgMaterialFrame from '../assets/images/materials_wood_frame_20260530.png';
 import imgMaterialPackaging from '../assets/images/materials_archival_packaging_20260530.png';
+import HowItWorksStepsGrid from '../components/HowItWorksStepsGrid';
 
-type RouteSetter = (r: 'home' | 'create') => void;
+type RouteSetter = (r: 'home' | 'create' | 'how') => void;
 
 type StyleDemo = {
   id: string;
@@ -137,6 +137,33 @@ const galleryReviews = [
     initials: 'NP',
     avatar: 'from-[#d9b79a] to-[#8a6248]',
   },
+  {
+    title: 'It felt right before checkout.',
+    quote:
+      '"The preview and style flow gave us confidence before ordering. By the time we approved the frame and size, it already felt like our piece."',
+    name: 'Olivia Chen',
+    order: 'Ordered a Classic Oil',
+    initials: 'OC',
+    avatar: 'from-[#d7c1a8] to-[#8b6549]',
+  },
+  {
+    title: 'The quality reads as art, not decor.',
+    quote:
+      '"We expected something sweet, but what arrived felt genuinely considered. The texture, framing, and finish made it feel collected."',
+    name: 'Daniel Foster',
+    order: 'Ordered a Warm & Painterly',
+    initials: 'DF',
+    avatar: 'from-[#b7c5b0] to-[#5e7057]',
+  },
+  {
+    title: 'The room preview made the decision easy.',
+    quote:
+      '"Seeing it in a believable room was the turning point. It stopped feeling abstract and started feeling like something we could actually live with."',
+    name: 'Priya Shah',
+    order: 'Ordered an Impressionist',
+    initials: 'PS',
+    avatar: 'from-[#c9b8d8] to-[#7e678f]',
+  },
 ];
 
 const HERO_STYLE_AUTOPLAY_MS = 4000;
@@ -197,7 +224,7 @@ function GalleryHeroSection({ onNavigate }: { onNavigate: RouteSetter }) {
       <div className="relative mx-auto grid min-h-[calc(88vh-4rem)] max-w-[1600px] items-center gap-8 px-6 py-12 lg:grid-cols-[0.8fr_1.2fr] lg:px-10">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-[520px]">
           <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#897A67]">AI Preview. Artist Finished.</p>
-          <h1 className="mt-4 max-w-[10ch] font-sans text-5xl font-semibold leading-[1.04] tracking-[-0.05em] text-[#241C16] md:text-7xl">
+          <h1 className="mt-4 max-w-[14ch] font-sans text-5xl font-semibold leading-[1.02] tracking-[-0.05em] text-[#241C16] md:text-7xl">
             Your memory, curated for the wall it lives on.
           </h1>
           <p className="mt-6 max-w-lg text-base leading-7 text-[#53493E] md:text-lg">
@@ -257,8 +284,8 @@ function GalleryHeroSection({ onNavigate }: { onNavigate: RouteSetter }) {
           <div className="absolute right-[8%] top-[8%] rounded-[8px] border border-white/70 bg-white/80 px-4 py-2 text-xs font-medium text-[#5D5246] backdrop-blur">
             {activeStyle.label}
           </div>
-          <div className="absolute bottom-[12%] left-[5%] w-48 rounded-[12px] bg-white/88 p-3 shadow-[0_24px_40px_rgba(43,31,21,0.14)] backdrop-blur">
-            <img src={activeStyle.original} alt="Source reference" className="aspect-[4/5] w-full rounded-[8px] object-cover" />
+          <div className="absolute bottom-[12%] left-[5%] w-48 rounded-[8px] bg-white/88 p-3 shadow-[0_24px_40px_rgba(43,31,21,0.14)] backdrop-blur">
+            <img src={activeStyle.original} alt="Source reference" className="aspect-[4/5] w-full rounded-[4px] object-cover" />
             <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#8F816C]">Source photo</p>
           </div>
           <div className="ml-auto w-full max-w-[560px]">
@@ -436,8 +463,11 @@ function GalleryStyleSection({ onNavigate }: { onNavigate: RouteSetter }) {
           <p className="mt-5 text-base leading-7 text-[#5C5247]">
             Review directions side by side and let the room-sized result answer whether the piece feels timeless, intimate, or contemporary.
           </p>
-          <button onClick={() => onNavigate('create')} className="mt-8 inline-flex items-center gap-2 border-b border-[#31271F] pb-2 text-sm font-medium text-[#31271F]">
-            Start with this collection <ArrowRight size={16} />
+          <button
+            onClick={() => onNavigate('create')}
+            className="group mt-8 inline-flex items-center gap-2 border-b border-[#31271F] pb-2 text-sm font-medium text-[#31271F]"
+          >
+            Start with this collection <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
           </button>
         </div>
 
@@ -540,29 +570,6 @@ function GalleryStyleSection({ onNavigate }: { onNavigate: RouteSetter }) {
 }
 
 function GalleryProcessSection({ onNavigate }: { onNavigate: RouteSetter }) {
-  const steps = [
-    {
-      label: 'Upload Your Photo',
-      body: 'Start with a photo that matters to you - a wedding day, a beloved pet, a family moment, or someone you want to keep close.',
-      image: imgProcessUpload,
-    },
-    {
-      label: 'Shape Your Vision',
-      body: 'Explore the painterly direction that feels right for you.',
-      image: imgHeroImpressionist,
-    },
-    {
-      label: 'See It in Your Space',
-      body: 'Visualize how your chosen painting may look in your home before it is brought to life on canvas.',
-      image: imgHeroBg,
-    },
-    {
-      label: 'Choose Your Size, Frame, and Approve',
-      body: 'Select the canvas size and frame that fit your space. Make any final adjustments, then approve the creative direction before your artist begins painting.',
-      image: imgMaterialFrame,
-    },
-  ];
-
   return (
     <section id="how-it-works" className="border-y border-[#DCCFBC] bg-[#EEE5D8] py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-10">
@@ -574,29 +581,13 @@ function GalleryProcessSection({ onNavigate }: { onNavigate: RouteSetter }) {
             </h2>
           </div>
           <button
-            onClick={() => onNavigate('create')}
+            onClick={() => onNavigate('how')}
             className="inline-flex items-center self-start text-[13px] font-medium text-[#31271F] underline underline-offset-4 transition hover:text-[#241C16] md:self-auto"
           >
-            Open the curator flow
+            See the full walkthrough
           </button>
         </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {steps.map((step, index) => (
-            <motion.div
-              key={step.label}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.35 }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
-              className="rounded-[2px] border border-[#DCCFBC] bg-white p-4"
-            >
-              <img src={step.image} alt={step.label} className="aspect-[8/5] w-full object-cover md:aspect-[4/5]" />
-              <p className="mt-4 text-[2.45rem] font-semibold leading-none tracking-[-0.04em] text-[#B49D82]">0{index + 1}</p>
-              <h3 className="mt-3 text-[1.7rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[#241C16]">{step.label}</h3>
-              <p className="mt-4 text-base leading-7 text-[#4F463A]">{step.body}</p>
-            </motion.div>
-          ))}
-        </div>
+        <HowItWorksStepsGrid />
       </div>
     </section>
   );
@@ -691,7 +682,7 @@ function GalleryProofSection({ onNavigate }: { onNavigate: RouteSetter }) {
           </button>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="hide-scrollbar mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2">
           {galleryReviews.map((review, index) => (
             <motion.article
               key={review.name}
@@ -699,23 +690,32 @@ function GalleryProofSection({ onNavigate }: { onNavigate: RouteSetter }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.45, delay: index * 0.08 }}
-              className="flex min-h-[360px] flex-col rounded-[2px] border border-[#E0D5C6] bg-white p-7 shadow-[0_10px_24px_rgba(56,42,29,0.04)]"
+              className="flex min-h-[330px] w-[86vw] min-w-[86vw] snap-start flex-col rounded-[12px] border border-[#E0D5C6] bg-white p-7 shadow-[0_10px_24px_rgba(56,42,29,0.04)] md:w-[320px] md:min-w-[320px]"
             >
               <div className="flex items-center gap-1 text-[#1F1B17]">
                 {Array.from({ length: 5 }).map((_, starIndex) => (
                   <Star key={starIndex} size={15} className="fill-current" />
                 ))}
               </div>
-              <h3 className="mt-6 text-[1.55rem] leading-tight text-[#241C16] font-sans font-semibold tracking-tight">{review.title}</h3>
-              <p className="mt-4 max-w-[28ch] text-[0.95rem] leading-7 text-[#6A6155]">{review.quote}</p>
+              <h3
+                title={review.title}
+                className="review-title-clamp mt-6 text-[1.55rem] leading-tight text-[#241C16] font-sans font-semibold tracking-tight"
+              >
+                {review.title}
+              </h3>
+              <div className="mt-4">
+                <p className="review-body-scroll hide-scrollbar max-w-[28ch] text-[0.95rem] leading-7 text-[#6A6155]">
+                  {review.quote}
+                </p>
+              </div>
               <div className="mt-auto border-t border-[#E5DCCF] pt-6">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${review.avatar} text-xs font-semibold text-white`}>
+                  <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${review.avatar} text-xs font-semibold text-white`}>
                     {review.initials}
                   </div>
                   <div>
                     <p className="text-base font-semibold text-[#241C16]">{review.name}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[#8A8175]">{review.order}</p>
+                    <p className="mt-1 text-sm text-[#8A8175]">{review.order}</p>
                   </div>
                 </div>
               </div>
