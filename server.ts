@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import { createServer as createHttpServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { portraitStylePromptMap } from './src/data/portraitStyles';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(process.cwd());
@@ -16,9 +17,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const host = process.env.HOST ?? (isProduction ? '0.0.0.0' : '127.0.0.1');
 const port = Number(process.env.PORT ?? (isProduction ? 10000 : 3000));
 const disableHmr = process.env.DISABLE_HMR === 'true';
-const forceMockGeneration = process.env.PIKTURA_FORCE_MOCK_GENERATION === 'true';
+const forceMockGeneration = process.env.VIEWBRUSH_FORCE_MOCK_GENERATION === 'true';
 const startedAt = new Date().toISOString();
-const workspaceName = path.basename(appRoot);
+const workspaceName = 'ViewBrush';
 const devServerMeta = {
   workspaceName,
   workspaceRoot: appRoot,
@@ -34,18 +35,7 @@ const devServerMeta = {
 
 const imageEditModel = process.env.GEMINI_IMAGE_EDIT_MODEL ?? 'gemini-2.5-flash-image';
 
-const conceptPrompts: Record<string, string> = {
-  classic:
-    'Create an heirloom-style oil portrait of the same pet with rich brushwork, warm museum lighting, deep shadows, and a calm studio background.',
-  impressionist:
-    'Create a luminous impressionist portrait of the same pet with soft brushwork, glowing color transitions, and preserved facial likeness and expression.',
-  acrylic:
-    'Create a textured acrylic portrait of the same pet with layered painterly surface detail, collected contemporary styling, and preserved facial likeness and expression.',
-  minimal:
-    'Create a refined contemporary portrait of the same pet with cleaner shapes, restrained background detail, crisp contrast, and a premium editorial feel.',
-  warm:
-    'Create a warm painterly portrait of the same pet with golden light, richer texture, emotional softness, and a tasteful neutral backdrop.',
-};
+const conceptPrompts: Record<string, string> = portraitStylePromptMap;
 
 const negativePrompt =
   'Do not add extra animals or people. Do not change the pet identity, fur markings, eye color, pose, or expression. No text, watermark, signature, frame, or cluttered background.';
@@ -58,11 +48,10 @@ type GeneratePortraitBody = {
 };
 
 const mockPreviewAssetPaths: Record<string, string> = {
-  classic: path.resolve(appRoot, 'src/assets/images/main_golden_oil_1780093879389.png'),
+  realism: path.resolve(appRoot, 'src/assets/images/hero_classic_italian_greyhound_stylized_20260704.png'),
+  classic: path.resolve(appRoot, 'src/assets/images/hero_warm_bernese_stylized_20260703.png'),
   impressionist: path.resolve(appRoot, 'src/assets/images/hero_impressionist_cavalier_stylized_20260703.png'),
-  warm: path.resolve(appRoot, 'src/assets/images/hero_warm_bernese_stylized_20260703.png'),
-  acrylic: path.resolve(appRoot, 'src/assets/images/hero_acrylic_shiba_stylized_20260703.png'),
-  minimal: path.resolve(appRoot, 'src/assets/images/hero_painting_gallery_minimal_20260530.png'),
+  'bold-expressive': path.resolve(appRoot, 'src/assets/images/hero_acrylic_shiba_stylized_20260703.png'),
 };
 
 function getApiKey() {
@@ -70,7 +59,7 @@ function getApiKey() {
 }
 
 function getMockPreviewPath(conceptId: string) {
-  return mockPreviewAssetPaths[conceptId] ?? mockPreviewAssetPaths.classic;
+  return mockPreviewAssetPaths[conceptId] ?? mockPreviewAssetPaths.realism;
 }
 
 async function getMockPortrait(conceptId: string) {
@@ -96,7 +85,7 @@ function dataUrlToImage(dataUrl: string) {
 }
 
 function buildPrompt(conceptId: string, note?: string) {
-  const conceptPrompt = conceptPrompts[conceptId] ?? conceptPrompts.classic;
+  const conceptPrompt = conceptPrompts[conceptId] ?? conceptPrompts.realism;
   const notePrompt = note?.trim()
     ? `Honor these customer-requested visual keywords while preserving the pet likeness, markings, and expression: ${note.trim()}`
     : 'Keep the composition focused on the pet, preserve the eyes carefully, and use a tasteful painterly background.';
@@ -211,7 +200,7 @@ app.use(express.json({ limit: '20mb' }));
 app.post('/api/generate-portrait', async (req, res) => {
   try {
     const body = (req.body ?? {}) as GeneratePortraitBody;
-    const conceptId = typeof body.conceptId === 'string' ? body.conceptId : 'classic';
+    const conceptId = typeof body.conceptId === 'string' ? body.conceptId : 'realism';
     const imageDataUrl = typeof body.imageDataUrl === 'string' ? body.imageDataUrl : '';
     const note = typeof body.note === 'string' ? body.note : '';
     const sizeId = typeof body.sizeId === 'string' ? body.sizeId : undefined;
@@ -278,7 +267,7 @@ async function start() {
           req.originalUrl,
           template.replace(
             '</head>',
-            `<script>window.__PIKTURA_DEV_SERVER__=${JSON.stringify(devServerMeta)};</script></head>`,
+            `<script>window.__VIEWBRUSH_DEV_SERVER__=${JSON.stringify(devServerMeta)};</script></head>`,
           ),
         );
         res.status(200).set({ 'Content-Type': 'text/html' }).end(rendered);
@@ -290,7 +279,7 @@ async function start() {
   }
 
   httpServer.listen(port, host, () => {
-    console.log(`Piktura server running on http://${host}:${port}`);
+    console.log(`ViewBrush server running on http://${host}:${port}`);
   });
 }
 

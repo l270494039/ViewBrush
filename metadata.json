@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "ViewBrush",
+  "description": "AI-assisted portrait previews finished by artists as custom wall-ready pet artwork.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

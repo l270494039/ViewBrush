@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "design-spec.md"
-OUTPUT = ROOT / "output" / "image" / "piktura-design-spec.png"
+OUTPUT = ROOT / "output" / "image" / "viewbrush-design-spec.png"
 
 FONT_CANDIDATES = [
     Path("/System/Library/Fonts/Hiragino Sans GB.ttc"),
@@ -77,7 +77,7 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont
 
 def parse_blocks() -> list[tuple[str, str]]:
     lines = SOURCE.read_text(encoding="utf-8").splitlines()
-    blocks: list[tuple[str, str]] = [("cover_title", "Piktura Design Spec"), ("cover_subtitle", "Design System and Visual Direction")]
+    blocks: list[tuple[str, str]] = [("cover_title", "ViewBrush Design Spec"), ("cover_subtitle", "Design System and Visual Direction")]
 
     for line in lines:
         stripped = line.rstrip()
@@ -151,7 +151,7 @@ def render() -> Path:
     y += 72
 
     cover_title = styles["cover_title"]
-    title_text = "Piktura Design Spec"
+    title_text = "ViewBrush Design Spec"
     title_width = draw.textbbox((0, 0), title_text, font=cover_title.font)[2]
     draw.text(((WIDTH - title_width) / 2, y), title_text, fill=cover_title.color, font=cover_title.font)
     y += cover_title.line_height
@@ -196,7 +196,7 @@ def render() -> Path:
 
     draw.line((SIDE_PADDING, total_height - 54, WIDTH - SIDE_PADDING, total_height - 54), fill=LINE, width=2)
     footer_font = load_font(18)
-    draw.text((SIDE_PADDING, total_height - 36), "Piktura Design Spec", fill=MUTED, font=footer_font)
+    draw.text((SIDE_PADDING, total_height - 36), "ViewBrush Design Spec", fill=MUTED, font=footer_font)
 
     image.save(OUTPUT, format="PNG", optimize=True)
     return OUTPUT

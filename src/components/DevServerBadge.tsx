@@ -17,7 +17,7 @@ export default function DevServerBadge() {
     return null;
   }
 
-  const meta = window.__PIKTURA_DEV_SERVER__;
+  const meta = window.__VIEWBRUSH_DEV_SERVER__;
 
   if (!meta) {
     return null;

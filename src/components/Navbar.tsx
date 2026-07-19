@@ -3,7 +3,7 @@ import { getButtonClasses } from '../utils/theme';
 import { Menu, ShoppingBag, User, X } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
-type NavRoute = 'home' | 'create' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'faq' | 'refund';
+type NavRoute = 'home' | 'create' | 'cart' | 'account' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'faq' | 'refund';
 
 type NavItem = { label: string; route: NavRoute | 'materials' };
 
@@ -77,6 +77,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             <button
               type="button"
               aria-label="Account"
+              onClick={() => onNavigate('account')}
               className="hidden text-[#5F564A] opacity-75 transition hover:opacity-100 lg:inline-flex"
             >
               <User size={18} />
@@ -84,6 +85,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             <button
               type="button"
               aria-label="Cart"
+              onClick={() => onNavigate('cart')}
               className="relative hidden text-[#5F564A] opacity-75 transition hover:opacity-100 lg:inline-flex"
             >
               <ShoppingBag size={18} />
@@ -141,6 +143,16 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
                 <button
                   key={label}
                   type="button"
+                  onClick={() => {
+                    if (label === 'Account') {
+                      onNavigate('account');
+                      setIsMobileMenuOpen(false);
+                    }
+                    if (label === 'Cart') {
+                      onNavigate('cart');
+                      setIsMobileMenuOpen(false);
+                    }
+                  }}
                   className="flex w-full items-center gap-3 rounded-[8px] px-4 py-3 text-left text-sm text-[#2D241B] transition hover:bg-[#F3EBDE]"
                 >
                   <Icon size={16} className="text-[#6B6155]" />

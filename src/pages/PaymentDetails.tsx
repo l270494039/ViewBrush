@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   CreditCard,
 } from 'lucide-react';
+import { getFinishLabel, getPresentationSummary, type FinishType } from '../data/presentationOptions';
 import { getBackButtonClasses, getButtonClasses, getHeadingFont, getInputClasses } from '../utils/theme';
 
 export type PaymentDetailsPayload = {
@@ -13,13 +14,41 @@ export type PaymentDetailsPayload = {
   conceptTone: string;
   conceptImage: string | null;
   sourceImage: string;
-  frameLabel: string;
-  frameStyle: string;
+  finishType: FinishType;
+  finishLabel: string;
+  frameLabel: string | null;
+  frameStyle: string | null;
   size: string;
   roomLabel: string;
   roomImage: string;
   note: string;
 };
+
+export function normalizePaymentDetailsPayload(raw: unknown): PaymentDetailsPayload | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const candidate = raw as Record<string, unknown>;
+  const finishType =
+    candidate.finishType === 'rolled-canvas' || candidate.finishType === 'gallery-wrap' || candidate.finishType === 'framed'
+      ? candidate.finishType
+      : 'framed';
+  const frameLabel = typeof candidate.frameLabel === 'string' ? candidate.frameLabel : null;
+
+  return {
+    conceptTitle: typeof candidate.conceptTitle === 'string' ? candidate.conceptTitle : '',
+    conceptTone: typeof candidate.conceptTone === 'string' ? candidate.conceptTone : '',
+    conceptImage: typeof candidate.conceptImage === 'string' ? candidate.conceptImage : null,
+    sourceImage: typeof candidate.sourceImage === 'string' ? candidate.sourceImage : '',
+    finishType,
+    finishLabel: typeof candidate.finishLabel === 'string' ? candidate.finishLabel : getFinishLabel(finishType),
+    frameLabel,
+    frameStyle: typeof candidate.frameStyle === 'string' ? candidate.frameStyle : null,
+    size: typeof candidate.size === 'string' ? candidate.size : '',
+    roomLabel: typeof candidate.roomLabel === 'string' ? candidate.roomLabel : '',
+    roomImage: typeof candidate.roomImage === 'string' ? candidate.roomImage : '',
+    note: typeof candidate.note === 'string' ? candidate.note : '',
+  };
+}
 
 export default function PaymentDetails({
   selection,
@@ -33,6 +62,7 @@ export default function PaymentDetails({
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('United States');
   const [isMobileViewport, setIsMobileViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+  const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
   const palette = {
     page: 'bg-[#f4ede3] text-[#2d241b]',
     surface: 'bg-[#fbf7f0] border-[#dccfbc]',
@@ -92,7 +122,8 @@ export default function PaymentDetails({
               <SummaryChip label="Style" value={selection.conceptTitle} />
               <SummaryChip label="Tone" value={selection.conceptTone} />
               <SummaryChip label="Size" value={selection.size} />
-              <SummaryChip label="Frame" value={selection.frameLabel} />
+              <SummaryChip label="Finish" value={selection.finishLabel} />
+              {selection.finishType === 'framed' && selection.frameLabel && <SummaryChip label="Frame Style" value={selection.frameLabel} />}
             </div>
 
             <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -100,7 +131,12 @@ export default function PaymentDetails({
                 <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.7),transparent_70%)]" />
                 <p className="relative text-[10px] font-bold uppercase tracking-[0.24em] opacity-55">Approved artwork</p>
                 <div className="relative mt-5">
-                  <ArtworkFrame src={selection.conceptImage} alt={selection.conceptTitle} frameStyle={selection.frameStyle} />
+                  <ArtworkFrame
+                    src={selection.conceptImage}
+                    alt={selection.conceptTitle}
+                    finishType={selection.finishType}
+                    frameStyle={selection.frameStyle}
+                  />
                   <div className="absolute -bottom-4 -left-1 w-[34%] min-w-[120px] max-w-[150px] rounded-[8px] border border-black/8 bg-white p-2 shadow-[0_14px_24px_rgba(0,0,0,0.08)]">
                     <img src={selection.sourceImage} alt="Source upload" className="aspect-[4/3] w-full object-cover" />
                     <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#7d7264]">Source photo</p>
@@ -114,7 +150,7 @@ export default function PaymentDetails({
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="opacity-60">Presentation</span>
-                    <span className="font-medium">{selection.frameLabel}</span>
+                    <span className="font-medium">{presentationSummary}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="opacity-60">Scale</span>
@@ -127,8 +163,7 @@ export default function PaymentDetails({
                 <h2 className={`mt-2 text-3xl ${getHeadingFont()}`}>Order summary</h2>
 
                 <div className="mt-6 space-y-3 border-y border-black/8 py-5 text-sm">
-                  <PriceRow label="Hand-painted portrait" value="$229" />
-                  <PriceRow label="Frame finishing" value="$50" />
+                  <PriceRow label="Portrait package" value="$279" />
                   <PriceRow label="Protected shipping" value="Included" />
                 </div>
 
@@ -217,24 +252,46 @@ function PriceRow({ label, value }: { label: string; value: string }) {
 function ArtworkFrame({
   src,
   alt,
+  finishType,
   frameStyle,
 }: {
   src: string | null;
   alt: string;
-  frameStyle: string;
+  finishType: FinishType;
+  frameStyle: string | null;
 }) {
+  const artwork = (
+    <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f2ea]">
+      {src ? <img src={src} alt={alt} className="block h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[#fbf8f3]" />}
+      <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(67,46,23,0.12)]" />
+    </div>
+  );
+
+  if (finishType === 'rolled-canvas') {
+    return (
+      <div className="relative mx-auto w-full max-w-[360px] bg-[#f5ede0] p-[10px] shadow-[0_14px_28px_rgba(38,28,18,0.14)]">
+        <div className="border border-[#d8cab6] bg-[#fffdfa] p-[12px]">{artwork}</div>
+      </div>
+    );
+  }
+
+  if (finishType === 'gallery-wrap') {
+    return (
+      <div className="relative mx-auto w-full max-w-[360px] bg-[linear-gradient(135deg,#c9b391_0%,#9f8763_55%,#d6c1a0_100%)] p-[7px] shadow-[0_18px_34px_rgba(38,28,18,0.18)]">
+        <div className="bg-[#efe3d2] p-[7px]">{artwork}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="relative mx-auto w-full max-w-[360px] p-[4px] shadow-[0_18px_34px_rgba(38,28,18,0.24),0_3px_8px_rgba(38,28,18,0.18)]"
-      style={{ backgroundImage: frameStyle }}
+      style={{ backgroundImage: frameStyle ?? 'linear-gradient(135deg, #d9bc72 0%, #ac7d2f 52%, #edcf8d 100%)' }}
     >
       <div className="bg-[#22180f] p-[1px]">
-        <div className="relative p-[4px]" style={{ backgroundImage: frameStyle }}>
+        <div className="relative p-[4px]" style={{ backgroundImage: frameStyle ?? 'linear-gradient(135deg, #d9bc72 0%, #ac7d2f 52%, #edcf8d 100%)' }}>
           <div className="bg-[#efe6d7] p-[10px]">
-            <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f2ea]">
-              {src ? <img src={src} alt={alt} className="block h-full w-full object-cover" /> : <div className="absolute inset-0 bg-[#fbf8f3]" />}
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(67,46,23,0.12)]" />
-            </div>
+            {artwork}
           </div>
         </div>
       </div>

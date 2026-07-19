@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
+import { getPresentationSummary } from '../data/presentationOptions';
 import { getBackButtonClasses, getBadgeClasses, getButtonClasses, getHeadingFont, getInputClasses } from '../utils/theme';
 import type { PaymentDetailsPayload } from './PaymentDetails';
 
@@ -54,6 +55,7 @@ export default function Checkout({
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [giftCard, setGiftCard] = useState('');
+  const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
 
   const total = useMemo(
     () => basePrice + (deliveryOption === 'express' ? expressSurcharge : 0),
@@ -255,8 +257,7 @@ export default function Checkout({
               </div>
 
               <div className="mt-5 space-y-3 text-sm">
-                <CheckoutRow label="Portrait" value="$229" />
-                <CheckoutRow label="Frame" value="$50" />
+                <CheckoutRow label="Portrait package" value="$279" />
                 <CheckoutRow label="Shipping" value={deliveryOption === 'express' ? '$25' : 'Free'} />
               </div>
 
@@ -275,7 +276,7 @@ export default function Checkout({
                   <img src={selection.sourceImage} alt="Source" className="h-16 w-16 border border-[#e6dbcf] object-cover" />
                   <div className="min-w-0">
                     <p className="truncate text-base font-semibold">{selection.conceptTitle}</p>
-                    <p className="mt-1 text-sm text-[#6e6254]">{selection.size} · {selection.frameLabel}</p>
+                    <p className="mt-1 text-sm text-[#6e6254]">{selection.size} · {presentationSummary}</p>
                   </div>
                 </div>
               </div>

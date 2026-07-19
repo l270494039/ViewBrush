@@ -17,7 +17,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "design-spec.md"
-OUTPUT = ROOT / "output" / "pdf" / "piktura-design-spec.pdf"
+OUTPUT = ROOT / "output" / "pdf" / "viewbrush-design-spec.pdf"
 
 FONT_PATHS = [
     Path("/Library/Fonts/Arial Unicode.ttf"),
@@ -28,7 +28,7 @@ FONT_PATHS = [
 def register_font() -> str:
     for path in FONT_PATHS:
         if path.exists():
-            font_name = "ArialUnicodePiktura"
+            font_name = "ArialUnicodeViewBrush"
             pdfmetrics.registerFont(TTFont(font_name, str(path)))
             return font_name
     raise FileNotFoundError("No compatible Unicode font found for PDF generation.")
@@ -57,7 +57,7 @@ def page_chrome(canvas, doc) -> None:
 
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#8F816C"))
-    canvas.drawString(doc.leftMargin, 11 * mm, "Piktura Design Spec")
+    canvas.drawString(doc.leftMargin, 11 * mm, "ViewBrush Design Spec")
     canvas.drawRightString(width - doc.rightMargin, 11 * mm, str(canvas.getPageNumber()))
     canvas.restoreState()
 
@@ -162,7 +162,7 @@ def build_story(styles: dict[str, ParagraphStyle]):
     lines = SOURCE.read_text(encoding="utf-8").splitlines()
     story = [
         Spacer(1, 24),
-        Paragraph("Piktura Design Spec", styles["title"]),
+        Paragraph("ViewBrush Design Spec", styles["title"]),
         Paragraph("Design System and Visual Direction", styles["subtitle"]),
         Paragraph(f"Generated from {SOURCE.name}", styles["meta"]),
         Paragraph(f"Export date: {date.today().isoformat()}", styles["meta"]),
@@ -210,7 +210,7 @@ def main() -> None:
         rightMargin=20 * mm,
         topMargin=28 * mm,
         bottomMargin=22 * mm,
-        title="Piktura Design Spec",
+        title="ViewBrush Design Spec",
         author="OpenAI Codex",
     )
     story = build_story(styles)

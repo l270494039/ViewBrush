@@ -9,7 +9,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-type PikturaDevServerMeta = {
+type ViewBrushDevServerMeta = {
   workspaceName: string;
   workspaceRoot: string;
   host: string;
@@ -22,5 +22,5 @@ type PikturaDevServerMeta = {
 };
 
 interface Window {
-  __PIKTURA_DEV_SERVER__?: PikturaDevServerMeta;
+  __VIEWBRUSH_DEV_SERVER__?: ViewBrushDevServerMeta;
 }

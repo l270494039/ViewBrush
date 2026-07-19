@@ -2,15 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PORT="${PIKTURA_PORT:-3001}"
-HOST="${PIKTURA_HOST:-127.0.0.1}"
+PORT="${VIEWBRUSH_PORT:-3001}"
+HOST="${VIEWBRUSH_HOST:-127.0.0.1}"
 DISABLE_HMR="${DISABLE_HMR:-false}"
 OUTPUT_DIR="$ROOT_DIR/output"
-PID_FILE="$OUTPUT_DIR/piktura-${PORT}.pid"
-LOG_FILE="$OUTPUT_DIR/piktura-${PORT}.log"
+PID_FILE="$OUTPUT_DIR/viewbrush-${PORT}.pid"
+LOG_FILE="$OUTPUT_DIR/viewbrush-${PORT}.log"
 URL="http://${HOST}:${PORT}"
 DEV_INFO_URL="${URL}/__dev-info"
-SCREEN_SESSION="piktura_${PORT}_dev"
+SCREEN_SESSION="viewbrush_${PORT}_dev"
 COMMAND="${1:-status}"
 ATTACH_MODE="${2:-}"
 
@@ -93,7 +93,7 @@ print_status() {
 start_background() {
   cd "$ROOT_DIR"
   : >"$LOG_FILE"
-  screen -dmS "$SCREEN_SESSION" zsh -lc "cd ${(q)ROOT_DIR} && env PORT=$PORT HOST=$HOST PIKTURA_PORT=$PORT PIKTURA_HOST=$HOST DISABLE_HMR=$DISABLE_HMR node --import tsx server.ts >> ${(q)LOG_FILE} 2>&1"
+  screen -dmS "$SCREEN_SESSION" zsh -lc "cd ${(q)ROOT_DIR} && env PORT=$PORT HOST=$HOST VIEWBRUSH_PORT=$PORT VIEWBRUSH_HOST=$HOST DISABLE_HMR=$DISABLE_HMR node --import tsx server.ts >> ${(q)LOG_FILE} 2>&1"
 
   if ! wait_for_server; then
     echo "Dev server failed to start. Check $LOG_FILE" >&2
@@ -111,7 +111,7 @@ start_background() {
 
 start_attached() {
   cd "$ROOT_DIR"
-  exec env PORT="$PORT" HOST="$HOST" PIKTURA_PORT="$PORT" PIKTURA_HOST="$HOST" DISABLE_HMR="$DISABLE_HMR" node --import tsx server.ts
+  exec env PORT="$PORT" HOST="$HOST" VIEWBRUSH_PORT="$PORT" VIEWBRUSH_HOST="$HOST" DISABLE_HMR="$DISABLE_HMR" node --import tsx server.ts
 }
 
 stop_managed_server() {

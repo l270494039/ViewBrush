@@ -5,7 +5,7 @@ import Footer from './components/Footer';
 import DevServerBadge from './components/DevServerBadge';
 import Home from './pages/Home';
 import Create from './pages/Create';
-import PaymentDetails, { type PaymentDetailsPayload } from './pages/PaymentDetails';
+import PaymentDetails, { normalizePaymentDetailsPayload, type PaymentDetailsPayload } from './pages/PaymentDetails';
 import Checkout, { type CheckoutSubmission } from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import Faq from './pages/Faq';
@@ -13,12 +13,19 @@ import RefundPolicy from './pages/RefundPolicy';
 import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
 import Materials from './pages/Materials';
+import Cart from './pages/Cart';
+import Account, { type AccountOrderSnapshot } from './pages/Account';
 
-type AppRoute = 'home' | 'create' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'materials' | 'faq' | 'refund';
+type AppRoute = 'home' | 'create' | 'cart' | 'account' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'materials' | 'faq' | 'refund';
+
+const cartStorageKey = 'viewbrush-saved-artwork';
+const accountOrderStorageKey = 'viewbrush-latest-order';
 
 const routeHashMap: Record<AppRoute, string> = {
   home: '',
   create: '#create',
+  cart: '#cart',
+  account: '#account',
   details: '#details',
   checkout: '#checkout',
   success: '#success',
@@ -36,6 +43,10 @@ function getRouteFromHash(hash: string): AppRoute {
       return 'home';
     case 'create':
       return 'create';
+    case 'cart':
+      return 'cart';
+    case 'account':
+      return 'account';
     case 'details':
       return 'details';
     case 'checkout':
@@ -60,10 +71,38 @@ function getRouteFromHash(hash: string): AppRoute {
   }
 }
 
+function getSavedCartSelection(): PaymentDetailsPayload | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const savedSelection = window.localStorage.getItem(cartStorageKey);
+    return savedSelection ? normalizePaymentDetailsPayload(JSON.parse(savedSelection)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getSavedLatestOrder(): AccountOrderSnapshot | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const savedOrder = window.localStorage.getItem(accountOrderStorageKey);
+    if (!savedOrder) return null;
+    const parsed = JSON.parse(savedOrder) as { selection?: unknown; order?: CheckoutSubmission } | null;
+    const selection = normalizePaymentDetailsPayload(parsed?.selection);
+    if (!selection || !parsed?.order) return null;
+    return { selection, order: parsed.order };
+  } catch {
+    return null;
+  }
+}
+
 function AppContent() {
   const [route, setRoute] = useState<AppRoute>('create');
   const [isRouteReady, setIsRouteReady] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsPayload | null>(null);
+  const [cartSelection, setCartSelection] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection());
+  const [latestOrder, setLatestOrder] = useState<AccountOrderSnapshot | null>(() => getSavedLatestOrder());
   const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(null);
   const isStudioRoute = route === 'create' || route === 'details' || route === 'checkout' || route === 'success';
 
@@ -96,6 +135,8 @@ function AppContent() {
       route === 'about' ||
       route === 'how' ||
       route === 'materials' ||
+      route === 'cart' ||
+      route === 'account' ||
       route === 'refund' ||
       route === 'details' ||
       route === 'checkout' ||
@@ -107,6 +148,18 @@ function AppContent() {
 
   const navigate = (nextRoute: AppRoute) => {
     setRoute(nextRoute);
+  };
+
+  const saveCartSelection = (selection: PaymentDetailsPayload) => {
+    setPaymentDetails(selection);
+    setCartSelection(selection);
+    window.localStorage.setItem(cartStorageKey, JSON.stringify(selection));
+    navigate('cart');
+  };
+
+  const clearCartSelection = () => {
+    setCartSelection(null);
+    window.localStorage.removeItem(cartStorageKey);
   };
 
   if (!isRouteReady) {
@@ -121,11 +174,35 @@ function AppContent() {
         {route === 'about' && <About onNavigate={navigate} />}
         {route === 'how' && <HowItWorks onNavigate={navigate} />}
         {route === 'materials' && <Materials onNavigate={navigate} />}
+        {route === 'cart' && (
+          <Cart
+            selection={cartSelection}
+            onCreate={() => navigate('create')}
+            onEdit={() => navigate('create')}
+            onClear={clearCartSelection}
+            onCheckout={() => {
+              if (!cartSelection) return;
+              setPaymentDetails(cartSelection);
+              navigate('checkout');
+            }}
+            onAccount={() => navigate('account')}
+            onHelp={() => navigate('faq')}
+          />
+        )}
+        {route === 'account' && (
+          <Account
+            savedSelection={cartSelection}
+            latestOrder={latestOrder}
+            onCreate={() => navigate('create')}
+            onOpenCart={() => navigate('cart')}
+          />
+        )}
         {route === 'faq' && <Faq onNavigate={navigate} />}
         {route === 'refund' && <RefundPolicy onNavigate={navigate} />}
         {route === 'create' && (
           <Create
             onNavigate={navigate}
+            onSaveForLater={saveCartSelection}
             onOpenDetails={(details) => {
               setPaymentDetails(details);
               navigate('details');
@@ -138,6 +215,7 @@ function AppContent() {
           ) : (
             <Create
               onNavigate={navigate}
+              onSaveForLater={saveCartSelection}
               onOpenDetails={(details) => {
                 setPaymentDetails(details);
                 navigate('details');
@@ -150,13 +228,19 @@ function AppContent() {
               selection={paymentDetails}
               onBack={() => navigate('details')}
               onComplete={(submission) => {
+                const orderSnapshot = { selection: paymentDetails, order: submission };
                 setCheckoutOrder(submission);
+                setLatestOrder(orderSnapshot);
+                setCartSelection(null);
+                window.localStorage.setItem(accountOrderStorageKey, JSON.stringify(orderSnapshot));
+                window.localStorage.removeItem(cartStorageKey);
                 navigate('success');
               }}
             />
           ) : (
             <Create
               onNavigate={navigate}
+              onSaveForLater={saveCartSelection}
               onOpenDetails={(details) => {
                 setPaymentDetails(details);
                 navigate('details');
@@ -178,6 +262,7 @@ function AppContent() {
                 setCheckoutOrder(null);
                 navigate('create');
               }}
+              onViewAccount={() => navigate('account')}
             />
           )}
       </main>

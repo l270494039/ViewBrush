@@ -2,9 +2,9 @@
 <img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
 </div>
 
-# Piktura
+# ViewBrush
 
-Piktura is a Vite + React app for uploading a pet photo, generating an AI portrait preview, and reviewing the framed result in different room scenes.
+ViewBrush is a Vite + React app for uploading a pet photo, generating an AI portrait preview, and reviewing the framed result in different room scenes.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ The dev helper script always replaces any older process on the same port, writes
 - `npm run preview`: Build and serve the production bundle
 
 If you only want to test the flow without spending image-generation quota, set
-`PIKTURA_FORCE_MOCK_GENERATION=true`. The app will return built-in mock preview
+`VIEWBRUSH_FORCE_MOCK_GENERATION=true`. The app will return built-in mock preview
 images instead of calling Gemini.
 
 ## Deploy on Render
@@ -44,4 +44,4 @@ This repo includes a `render.yaml` blueprint for a Node web service.
 The production server reads environment variables from Render directly. For local development it will also load `.env.local` and `.env` from the project root.
 
 If you want Render to run in demo mode without real image generation, set
-`PIKTURA_FORCE_MOCK_GENERATION=true` in Render Environment and redeploy.
+`VIEWBRUSH_FORCE_MOCK_GENERATION=true` in Render Environment and redeploy.

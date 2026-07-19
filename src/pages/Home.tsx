@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Brush, Frame, Package, Star, SwatchBook } from 'lucide-react';
+import { portraitStyles, type PortraitStyleId } from '../data/portraitStyles';
 
 import imgHero from '../assets/images/main_golden_oil_1780093879389.png';
 import imgHeroClassicOriginal from '../assets/images/landing-hero-20260715/landing-hero0-1-min.webp';
@@ -31,38 +32,32 @@ type StyleDemo = {
 };
 
 const styleDemos: StyleDemo[] = [
-  {
-    id: 'classic',
-    label: 'Classic Oil',
-    mood: 'Painterly heirloom warmth',
-    note: 'Rich shadows, deeper contrast, and a gallery-ready frame.',
-    original: imgHeroClassicOriginal,
-    transformed: imgHeroClassic,
-  },
-  {
-    id: 'impressionist',
-    label: 'Impressionist',
-    mood: 'Luminous and soft',
-    note: 'Airy daylight, floral interiors, and luminous brushwork that keeps the portrait gentle.',
-    original: imgHeroImpressionistOriginal,
-    transformed: imgHeroImpressionist,
-  },
-  {
-    id: 'acrylic',
-    label: 'Textured Acrylic',
-    mood: 'Layered and contemporary',
-    note: 'Sunlit interiors, tactile acrylic texture, and a collected, modern-room finish.',
-    original: imgHeroAcrylicOriginal,
-    transformed: imgHeroAcrylic,
-  },
-  {
-    id: 'warm',
-    label: 'Warm & Painterly',
-    mood: 'Emotional and glowing',
-    note: 'Golden room light, richer brush texture, and an intimate heirloom atmosphere.',
-    original: imgHeroWarmOriginal,
-    transformed: imgHeroWarm,
-  },
+  ...portraitStyles.map((style) => ({
+    id: style.id,
+    label: style.title,
+    mood: style.landingMood,
+    note: style.landingNote,
+    ...(
+      {
+        realism: {
+          original: imgHeroClassicOriginal,
+          transformed: imgHeroClassic,
+        },
+        classic: {
+          original: imgHeroWarmOriginal,
+          transformed: imgHeroWarm,
+        },
+        impressionist: {
+          original: imgHeroImpressionistOriginal,
+          transformed: imgHeroImpressionist,
+        },
+        'bold-expressive': {
+          original: imgHeroAcrylicOriginal,
+          transformed: imgHeroAcrylic,
+        },
+      } satisfies Record<PortraitStyleId, Pick<StyleDemo, 'original' | 'transformed'>>
+    )[style.id],
+  })),
 ];
 
 const materialStories = [
@@ -106,7 +101,7 @@ const galleryReviews = [
     quote:
       '"I was nervous ordering art online, but the AI preview feature gave me confidence. When the actual painting arrived, it was even better than the preview."',
     name: 'Sarah Jenkins',
-    order: 'Ordered a Classic Oil',
+    order: 'Ordered the Realism style',
     initials: 'SJ',
     avatar: 'from-[#b7d0de] to-[#6f8491]',
   },
@@ -115,7 +110,7 @@ const galleryReviews = [
     quote:
       '"The quality of the canvas and the antique frame are top-notch. You can see the actual brushstrokes. It feels like a true heirloom piece."',
     name: 'James Mitchell',
-    order: 'Ordered an Impressionist',
+    order: 'Ordered the Impressionist style',
     initials: 'JM',
     avatar: 'from-[#b8c4cf] to-[#61707b]',
   },
@@ -124,7 +119,7 @@ const galleryReviews = [
     quote:
       '"We used the preview flow before ordering and it made the decision easy. The final framed portrait arrived feeling completely resolved."',
     name: 'Emma Rodriguez',
-    order: 'Ordered a Warm & Painterly',
+    order: 'Ordered the Classic style',
     initials: 'ER',
     avatar: 'from-[#8fa18f] to-[#455647]',
   },
@@ -133,7 +128,7 @@ const galleryReviews = [
     quote:
       '"Seeing the portrait mocked up in a room made the choice feel obvious. It already looked like it belonged in our home."',
     name: 'Noah Parker',
-    order: 'Ordered a Textured Acrylic',
+    order: 'Ordered the Bold & Expressive style',
     initials: 'NP',
     avatar: 'from-[#d9b79a] to-[#8a6248]',
   },
@@ -142,7 +137,7 @@ const galleryReviews = [
     quote:
       '"The preview and style flow gave us confidence before ordering. By the time we approved the frame and size, it already felt like our piece."',
     name: 'Olivia Chen',
-    order: 'Ordered a Classic Oil',
+    order: 'Ordered the Realism style',
     initials: 'OC',
     avatar: 'from-[#d7c1a8] to-[#8b6549]',
   },
@@ -151,7 +146,7 @@ const galleryReviews = [
     quote:
       '"We expected something sweet, but what arrived felt genuinely considered. The texture, framing, and finish made it feel collected."',
     name: 'Daniel Foster',
-    order: 'Ordered a Warm & Painterly',
+    order: 'Ordered the Classic style',
     initials: 'DF',
     avatar: 'from-[#b7c5b0] to-[#5e7057]',
   },
@@ -160,7 +155,7 @@ const galleryReviews = [
     quote:
       '"Seeing it in a believable room was the turning point. It stopped feeling abstract and started feeling like something we could actually live with."',
     name: 'Priya Shah',
-    order: 'Ordered an Impressionist',
+    order: 'Ordered the Impressionist style',
     initials: 'PS',
     avatar: 'from-[#c9b8d8] to-[#7e678f]',
   },

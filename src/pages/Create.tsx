@@ -2,9 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, Camera, Check, ChevronDown, MessageSquare, MoveRight, RotateCcw, ShoppingBag, WandSparkles } from 'lucide-react';
 import { getBackButtonClasses, getButtonClasses, getCardClasses, getHeadingFont, getInputClasses, getLabelClasses } from '../utils/theme';
+import { portraitStyles, type PortraitStyleId } from '../data/portraitStyles';
+import { finishOptions, getFinishLabel, getPresentationSummary, type FinishType } from '../data/presentationOptions';
 import type { PaymentDetailsPayload } from './PaymentDetails';
 
 import imgOriginal from '../assets/images/main_golden_oil_1780093879389.png';
+import imgHeroClassic from '../assets/images/hero_classic_italian_greyhound_stylized_20260704.png';
 import imgHeroImpressionist from '../assets/images/hero_impressionist_cavalier_stylized_20260703.png';
 import imgHeroAcrylic from '../assets/images/hero_acrylic_shiba_stylized_20260703.png';
 import imgHeroWarm from '../assets/images/hero_warm_bernese_stylized_20260703.png';
@@ -75,34 +78,20 @@ type CommerceFrameOption = {
 };
 
 const concepts: Concept[] = [
-  {
-    id: 'classic',
-    title: 'Classic Oil',
-    tone: 'Heirloom warmth',
-    note: 'Richer shadow depth and a more traditional, collected wall presence.',
-    image: imgOriginal,
-  },
-  {
-    id: 'impressionist',
-    title: 'Impressionist',
-    tone: 'Loose and luminous',
-    note: 'Airy daylight, floral room context, and luminous brushwork that opens up the color.',
-    image: imgHeroImpressionist,
-  },
-  {
-    id: 'warm',
-    title: 'Warm & Painterly',
-    tone: 'Golden emotional light',
-    note: 'Golden room light, denser texture, and a warmer, more cinematic finish.',
-    image: imgHeroWarm,
-  },
-  {
-    id: 'acrylic',
-    title: 'Textured Acrylic',
-    tone: 'Layered contemporary texture',
-    note: 'A tactile acrylic surface with sunlit room detail and a collected modern finish.',
-    image: imgHeroAcrylic,
-  },
+  ...portraitStyles.map((style) => ({
+    id: style.id,
+    title: style.title,
+    tone: style.createTone,
+    note: style.createNote,
+    image: (
+      {
+        realism: imgHeroClassic,
+        classic: imgHeroWarm,
+        impressionist: imgHeroImpressionist,
+        'bold-expressive': imgHeroAcrylic,
+      } satisfies Record<PortraitStyleId, string>
+    )[style.id],
+  })),
 ];
 
 const roomScenes = [
@@ -147,7 +136,7 @@ const commerceFrameOptions: CommerceFrameOption[] = [
 const commerceSizeOptions: CommerceSizeOption[] = [
   {
     id: 'portrait-40x50',
-    metric: 'Portrait · 40 x 50 cm',
+    metric: 'Portrait · 16 x 20 in',
     orientation: 'portrait',
     ratioClassName: 'aspect-[4/5]',
     previewWidthPercent: 44,
@@ -159,7 +148,7 @@ const commerceSizeOptions: CommerceSizeOption[] = [
   },
   {
     id: 'portrait-60x75',
-    metric: 'Portrait · 60 x 75 cm',
+    metric: 'Portrait · 24 x 30 in',
     orientation: 'portrait',
     ratioClassName: 'aspect-[4/5]',
     previewWidthPercent: 54,
@@ -171,7 +160,7 @@ const commerceSizeOptions: CommerceSizeOption[] = [
   },
   {
     id: 'landscape-75x60',
-    metric: 'Landscape · 75 x 60 cm',
+    metric: 'Landscape · 30 x 24 in',
     orientation: 'landscape',
     ratioClassName: 'aspect-[5/4]',
     previewWidthPercent: 68,
@@ -183,7 +172,7 @@ const commerceSizeOptions: CommerceSizeOption[] = [
   },
   {
     id: 'landscape-100x80',
-    metric: 'Landscape · 100 x 80 cm',
+    metric: 'Landscape · 40 x 32 in',
     orientation: 'landscape',
     ratioClassName: 'aspect-[5/4]',
     previewWidthPercent: 82,
@@ -195,7 +184,7 @@ const commerceSizeOptions: CommerceSizeOption[] = [
   },
   {
     id: 'square-60x60',
-    metric: 'Square · 60 x 60 cm',
+    metric: 'Square · 24 x 24 in',
     orientation: 'square',
     ratioClassName: 'aspect-square',
     previewWidthPercent: 52,
@@ -230,13 +219,15 @@ const getViewportBoundArtworkStyle = (widthPercent: number, maxWidth: number): R
 function buildFeedbackMailto({
   conceptTitle,
   sizeMetric,
+  finishLabel,
   frameLabel,
   roomLabel,
   note,
 }: {
   conceptTitle: string;
   sizeMetric: string;
-  frameLabel: string;
+  finishLabel: string;
+  frameLabel: string | null;
   roomLabel: string;
   note: string;
 }) {
@@ -244,13 +235,14 @@ function buildFeedbackMailto({
 
   const subject = `Preview feedback: ${conceptTitle}`;
   const body = [
-    'Hi Piktura team,',
+    'Hi ViewBrush team,',
     '',
     'I have feedback on my generated preview:',
     '',
     `Style: ${conceptTitle}`,
     `Size: ${sizeMetric}`,
-    `Frame: ${frameLabel}`,
+    `Finish: ${finishLabel}`,
+    ...(frameLabel ? [`Frame Style: ${frameLabel}`] : []),
     `Room mockup: ${roomLabel}`,
     '',
     'What I would like adjusted:',
@@ -318,9 +310,11 @@ function CreateBackButton({ onNavigate, className = '' }: { onNavigate: RouteSet
 export default function Create({
   onNavigate,
   onOpenDetails,
+  onSaveForLater,
 }: {
   onNavigate: RouteSetter;
   onOpenDetails?: (details: PaymentDetailsPayload) => void;
+  onSaveForLater?: (details: PaymentDetailsPayload) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const generationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -328,6 +322,7 @@ export default function Create({
   const [selectedConceptId, setSelectedConceptId] = useState(concepts[0].id);
   const [previewConceptId, setPreviewConceptId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState(roomScenes[0].id);
+  const [selectedFinishType, setSelectedFinishType] = useState<FinishType>('gallery-wrap');
   const [selectedFrameId, setSelectedFrameId] = useState(commerceFrameOptions[0].id);
   const [selectedSize, setSelectedSize] = useState(commerceSizeOptions[0].id);
   const [note, setNote] = useState('');
@@ -373,14 +368,22 @@ export default function Create({
     () => commerceFrameOptions.find((frame) => frame.id === selectedFrameId) ?? commerceFrameOptions[0],
     [selectedFrameId]
   );
+  const selectedFinish = useMemo(
+    () => finishOptions.find((finish) => finish.id === selectedFinishType) ?? finishOptions[0],
+    [selectedFinishType]
+  );
   const selectedSizeOption = useMemo(
     () => commerceSizeOptions.find((option) => option.id === selectedSize) ?? commerceSizeOptions[0],
     [selectedSize]
   );
 
+  const selectedFrameLabel = selectedFinishType === 'framed' ? selectedFrame.label : null;
+  const selectedFrameStyle = selectedFinishType === 'framed' ? selectedFrame.color : null;
+  const selectedPresentationSummary = getPresentationSummary(selectedFinish.label, selectedFrameLabel);
+
   const generationLabel = Object.keys(generatedImages).length > 0 ? 'Regenerate Preview' : 'Generate Preview';
   const generationPhase = getGenerationPhase(generationProgress);
-  const shouldUseLocalMockGeneration = import.meta.env.DEV && window.__PIKTURA_DEV_SERVER__?.hasApiKey === false;
+  const shouldUseLocalMockGeneration = import.meta.env.DEV && window.__VIEWBRUSH_DEV_SERVER__?.hasApiKey === false;
 
   async function handleGenerate() {
     if (!hasUpload) {
@@ -540,8 +543,10 @@ export default function Create({
     conceptTone: previewConcept.tone,
     conceptImage: previewConcept.image,
     sourceImage,
-    frameLabel: selectedFrame.label,
-    frameStyle: selectedFrame.color,
+    finishType: selectedFinishType,
+    finishLabel: selectedFinish.label,
+    frameLabel: selectedFrameLabel,
+    frameStyle: selectedFrameStyle,
     size: selectedSizeOption.metric,
     roomLabel: selectedRoom.label,
     roomImage: selectedRoom.image,
@@ -550,7 +555,8 @@ export default function Create({
   const feedbackHref = buildFeedbackMailto({
     conceptTitle: previewConcept.title,
     sizeMetric: selectedSizeOption.metric,
-    frameLabel: selectedFrame.label,
+    finishLabel: selectedFinish.label,
+    frameLabel: selectedFrameLabel,
     roomLabel: selectedRoom.label,
     note,
   });
@@ -568,6 +574,10 @@ export default function Create({
         selectedRoom={selectedRoom}
         selectedRoomId={selectedRoomId}
         setSelectedRoomId={setSelectedRoomId}
+        selectedFinish={selectedFinish}
+        selectedFinishType={selectedFinishType}
+        setSelectedFinishType={setSelectedFinishType}
+        selectedPresentationSummary={selectedPresentationSummary}
         selectedFrame={selectedFrame}
         selectedFrameId={selectedFrameId}
         setSelectedFrameId={setSelectedFrameId}
@@ -579,6 +589,7 @@ export default function Create({
         studio={studioControls}
         feedbackHref={feedbackHref}
         onOpenDetails={() => onOpenDetails?.(detailsPayload)}
+        onSaveForLater={() => onSaveForLater?.(detailsPayload)}
       />
     </>
   );
@@ -594,6 +605,10 @@ function CommerceCreate({
   selectedRoom,
   selectedRoomId,
   setSelectedRoomId,
+  selectedFinish,
+  selectedFinishType,
+  setSelectedFinishType,
+  selectedPresentationSummary,
   selectedFrame,
   selectedFrameId,
   setSelectedFrameId,
@@ -605,6 +620,7 @@ function CommerceCreate({
   studio,
   feedbackHref,
   onOpenDetails,
+  onSaveForLater,
 }: {
   onNavigate: RouteSetter;
   conceptOptions: GeneratedConcept[];
@@ -615,6 +631,10 @@ function CommerceCreate({
   selectedRoom: { id: string; label: string; image: string };
   selectedRoomId: string;
   setSelectedRoomId: (id: string) => void;
+  selectedFinish: { id: FinishType; label: string; title: string; description: string };
+  selectedFinishType: FinishType;
+  setSelectedFinishType: (id: FinishType) => void;
+  selectedPresentationSummary: string;
   selectedFrame: CommerceFrameOption;
   selectedFrameId: string;
   setSelectedFrameId: (id: string) => void;
@@ -626,6 +646,7 @@ function CommerceCreate({
   studio: StudioControls;
   feedbackHref: string | null;
   onOpenDetails?: () => void;
+  onSaveForLater?: () => void;
 }) {
   const [view, setView] = useState<'canvas' | 'room'>('canvas');
   const isPreviewStep = studio.hasGeneratedPreview;
@@ -657,6 +678,10 @@ function CommerceCreate({
           setSelectedConceptId={setSelectedConceptId}
           selectedRoom={selectedRoom}
           selectedRoomId={selectedRoomId}
+          selectedFinish={selectedFinish}
+          selectedFinishType={selectedFinishType}
+          setSelectedFinishType={setSelectedFinishType}
+          selectedPresentationSummary={selectedPresentationSummary}
           selectedFrame={selectedFrame}
           selectedFrameId={selectedFrameId}
           setSelectedFrameId={setSelectedFrameId}
@@ -668,6 +693,7 @@ function CommerceCreate({
           studio={studio}
           feedbackHref={feedbackHref}
           onOpenDetails={onOpenDetails}
+          onSaveForLater={onSaveForLater}
           view={view}
           setView={setView}
           isPreviewStep={isPreviewStep}
@@ -685,6 +711,10 @@ function CommerceCreate({
           setSelectedConceptId={setSelectedConceptId}
           selectedRoom={selectedRoom}
           selectedRoomId={selectedRoomId}
+          selectedFinish={selectedFinish}
+          selectedFinishType={selectedFinishType}
+          setSelectedFinishType={setSelectedFinishType}
+          selectedPresentationSummary={selectedPresentationSummary}
           selectedFrame={selectedFrame}
           selectedFrameId={selectedFrameId}
           setSelectedFrameId={setSelectedFrameId}
@@ -696,6 +726,7 @@ function CommerceCreate({
           studio={studio}
           feedbackHref={feedbackHref}
           onOpenDetails={onOpenDetails}
+          onSaveForLater={onSaveForLater}
           view={view}
           setView={setView}
           isPreviewStep={isPreviewStep}
@@ -717,6 +748,10 @@ type CommerceCreateLayoutProps = {
   setSelectedConceptId: (id: string) => void;
   selectedRoom: { id: string; label: string; image: string };
   selectedRoomId: string;
+  selectedFinish: { id: FinishType; label: string; title: string; description: string };
+  selectedFinishType: FinishType;
+  setSelectedFinishType: (id: FinishType) => void;
+  selectedPresentationSummary: string;
   selectedFrame: CommerceFrameOption;
   selectedFrameId: string;
   setSelectedFrameId: (id: string) => void;
@@ -728,6 +763,7 @@ type CommerceCreateLayoutProps = {
   studio: StudioControls;
   feedbackHref: string | null;
   onOpenDetails?: () => void;
+  onSaveForLater?: () => void;
   view: 'canvas' | 'room';
   setView: (view: 'canvas' | 'room') => void;
   isPreviewStep: boolean;
@@ -744,6 +780,10 @@ function MobileCommerceCreate({
   selectedConceptId,
   setSelectedConceptId,
   selectedRoom,
+  selectedFinish,
+  selectedFinishType,
+  setSelectedFinishType,
+  selectedPresentationSummary,
   selectedFrame,
   selectedFrameId,
   setSelectedFrameId,
@@ -755,6 +795,7 @@ function MobileCommerceCreate({
   studio,
   feedbackHref,
   onOpenDetails,
+  onSaveForLater,
   view,
   setView,
   isPreviewStep,
@@ -768,20 +809,20 @@ function MobileCommerceCreate({
     { label: 'Details' },
   ];
   const currentStepIndex = studio.selectedConceptReady ? 2 : studio.hasUpload ? 1 : 0;
-  const previewSectionRef = useRef<HTMLElement | null>(null);
+  const selectedBarRef = useRef<HTMLDivElement | null>(null);
   const styleSectionRef = useRef<HTMLElement | null>(null);
   const sizeSectionRef = useRef<HTMLElement | null>(null);
-  const frameSectionRef = useRef<HTMLElement | null>(null);
-  const [activeSelectionNav, setActiveSelectionNav] = useState<'style' | 'size' | 'frame'>('style');
+  const finishSectionRef = useRef<HTMLElement | null>(null);
+  const [activeSelectionNav, setActiveSelectionNav] = useState<'style' | 'size' | 'finish'>('style');
 
   useEffect(() => {
     const updateActiveSelectionNav = () => {
       const sections = [
         { key: 'style' as const, node: styleSectionRef.current },
         { key: 'size' as const, node: sizeSectionRef.current },
-        { key: 'frame' as const, node: frameSectionRef.current },
+        { key: 'finish' as const, node: finishSectionRef.current },
       ];
-      const threshold = (previewSectionRef.current?.getBoundingClientRect().bottom ?? 0) + 24;
+      const threshold = (selectedBarRef.current?.getBoundingClientRect().bottom ?? 0) + 24;
       const visibleSections = sections.filter((section) => section.node);
 
       if (visibleSections.length === 0) return;
@@ -800,7 +841,7 @@ function MobileCommerceCreate({
         const top = section.node!.getBoundingClientRect().top;
         if (closest == null) return { key: section.key, distance: top };
         return top < closest.distance ? { key: section.key, distance: top } : closest;
-      }, null as { key: 'style' | 'size' | 'frame'; distance: number } | null);
+      }, null as { key: 'style' | 'size' | 'finish'; distance: number } | null);
 
       if (nearestUpcoming) {
         setActiveSelectionNav(nearestUpcoming.key);
@@ -817,16 +858,16 @@ function MobileCommerceCreate({
     };
   }, []);
 
-  const scrollToSelectionSection = (section: 'style' | 'size' | 'frame') => {
+  const scrollToSelectionSection = (section: 'style' | 'size' | 'finish') => {
     const sectionMap = {
       style: styleSectionRef.current,
       size: sizeSectionRef.current,
-      frame: frameSectionRef.current,
+      finish: finishSectionRef.current,
     };
     const target = sectionMap[section];
     if (!target) return;
 
-    const stickyOffset = (previewSectionRef.current?.getBoundingClientRect().height ?? 0) + 16;
+    const stickyOffset = (selectedBarRef.current?.getBoundingClientRect().height ?? 0) + 16;
     const targetTop = window.scrollY + target.getBoundingClientRect().top - stickyOffset;
 
     window.scrollTo({
@@ -908,7 +949,7 @@ function MobileCommerceCreate({
       </div>
 
       <div className="mx-auto w-full max-w-[1600px] px-4 pb-8 pt-4">
-        <section ref={previewSectionRef} className="sticky top-0 z-20 -mx-4 border-b border-[#E6DED2] bg-[#F6F0E7]/95 px-4 pb-4 pt-2 backdrop-blur-md">
+        <section className="-mx-4 border-b border-[#E6DED2] px-4 pb-4 pt-2">
           <div
             className="relative overflow-hidden rounded-[12px] border border-[#DDD1BF] px-1.5 py-2 shadow-[0_18px_40px_rgba(53,39,24,0.10)]"
             style={{
@@ -923,6 +964,7 @@ function MobileCommerceCreate({
                   <FramedArtwork
                     src={canvasArtworkSrc}
                     alt={studio.selectedConceptReady ? 'Generated Canvas' : 'Uploaded reference photo'}
+                    finishType={selectedFinishType}
                     frameStyle={selectedFrame.color}
                     frameTexture={selectedFrame.image}
                     className="mx-auto"
@@ -962,6 +1004,7 @@ function MobileCommerceCreate({
                     <FramedArtwork
                       src={studio.selectedConceptReady ? previewConcept.image : null}
                       alt="Canvas in room"
+                      finishType={selectedFinishType}
                       frameStyle={selectedFrame.color}
                       frameTexture={selectedFrame.image}
                       ratioClassName={selectedSizeOption.ratioClassName}
@@ -975,8 +1018,13 @@ function MobileCommerceCreate({
               )}
             </AnimatePresence>
           </div>
+        </section>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-5 text-[#2D241B]">
+        <div
+          ref={selectedBarRef}
+          className="sticky top-0 z-20 -mx-4 border-b border-[#E6DED2] bg-[#F6F0E7]/95 px-4 py-3 backdrop-blur-md"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-sm leading-5 text-[#2D241B]">
             <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8E7C66]">Selected</div>
             <button
               type="button"
@@ -998,15 +1046,15 @@ function MobileCommerceCreate({
             </button>
             <button
               type="button"
-              onClick={() => scrollToSelectionSection('frame')}
+              onClick={() => scrollToSelectionSection('finish')}
               className={`max-w-full rounded-[8px] px-2.5 py-1.5 text-left text-xs transition ${
-                activeSelectionNav === 'frame' ? 'bg-[#2D241B] font-semibold text-white' : 'bg-white/72 text-[#6A5D50]'
+                activeSelectionNav === 'finish' ? 'bg-[#2D241B] font-semibold text-white' : 'bg-white/72 text-[#6A5D50]'
               }`}
             >
-              {selectedFrame.label}
+              {selectedPresentationSummary}
             </button>
           </div>
-        </section>
+        </div>
 
         <div className="mt-6 space-y-4">
           <section className={`${getCardClasses()} overflow-hidden`}>
@@ -1125,13 +1173,22 @@ function MobileCommerceCreate({
             </div>
           </section>
 
-          <section ref={frameSectionRef} className={`${getCardClasses()} overflow-hidden`}>
+          <section ref={finishSectionRef} className={`${getCardClasses()} overflow-hidden`}>
             <div className="border-b border-black/6 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8B7E66]">5. Frame</p>
-              <h3 className="mt-1 text-lg font-semibold text-[#1A1A1A]">Choose the finishing frame</h3>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8B7E66]">5. Presentation</p>
+              <h3 className="mt-1 text-lg font-semibold text-[#1A1A1A]">Choose how the artwork arrives</h3>
             </div>
-            <div className="px-4 py-4">
-              <FrameOptionRail selectedFrameId={selectedFrameId} setSelectedFrameId={setSelectedFrameId} variant="compact-grid" />
+            <div className="space-y-4 px-4 py-4">
+              <FinishOptionGrid selectedFinishType={selectedFinishType} setSelectedFinishType={setSelectedFinishType} />
+              {selectedFinishType === 'framed' && (
+                <div className="rounded-[8px] border border-[#E7DED1] bg-[#FCFAF6] p-3">
+                  <div className="mb-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E7C66]">Frame Style</div>
+                    <div className="mt-1 text-[13px] leading-5 text-[#62584D]">Choose the outer frame finish after selecting framed presentation.</div>
+                  </div>
+                  <FrameOptionRail selectedFrameId={selectedFrameId} setSelectedFrameId={setSelectedFrameId} variant="compact-grid" />
+                </div>
+              )}
             </div>
           </section>
 
@@ -1154,14 +1211,28 @@ function MobileCommerceCreate({
                   <div className="mt-1 font-medium text-[#2D241B]">{selectedSizeOption.metric}</div>
                 </div>
                 <div className="rounded-[8px] bg-white/72 px-3 py-3">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#94826D]">Frame</div>
-                  <div className="mt-1 font-medium text-[#2D241B]">{selectedFrame.label}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#94826D]">Finish</div>
+                  <div className="mt-1 font-medium text-[#2D241B]">{selectedFinish.label}</div>
                 </div>
                 <div className="rounded-[8px] bg-white/72 px-3 py-3">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#94826D]">Room Mockup</div>
                   <div className="mt-1 font-medium text-[#2D241B]">{selectedRoom.label}</div>
                 </div>
               </div>
+              {selectedFinishType === 'framed' && (
+                <div className="mt-3 rounded-[8px] bg-white/72 px-3 py-3 text-sm">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#94826D]">Frame Style</div>
+                  <div className="mt-1 font-medium text-[#2D241B]">{selectedFrame.label}</div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={onSaveForLater}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[8px] border border-[#2D241B]/12 bg-white/78 px-4 py-3 text-sm font-semibold text-[#2D241B] transition hover:bg-white"
+              >
+                <ShoppingBag size={15} />
+                Save for later
+              </button>
             </section>
           )}
 
@@ -1222,6 +1293,9 @@ function DesktopCommerceCreate({
   setSelectedConceptId,
   selectedRoom,
   selectedRoomId,
+  selectedFinish,
+  selectedFinishType,
+  setSelectedFinishType,
   selectedFrame,
   selectedFrameId,
   setSelectedFrameId,
@@ -1233,6 +1307,7 @@ function DesktopCommerceCreate({
   studio,
   feedbackHref,
   onOpenDetails,
+  onSaveForLater,
   view,
   setView,
   isPreviewStep,
@@ -1399,9 +1474,20 @@ function DesktopCommerceCreate({
 
               <div>
                 <div className="mb-2">
-                  <h3 className={getLabelClasses().replace('mb-4', '')}>5. Frame</h3>
+                  <h3 className={getLabelClasses().replace('mb-4', '')}>5. Presentation</h3>
                 </div>
-                <FrameOptionRail selectedFrameId={selectedFrameId} setSelectedFrameId={setSelectedFrameId} variant="grid" />
+                <div className="space-y-4">
+                  <FinishOptionGrid selectedFinishType={selectedFinishType} setSelectedFinishType={setSelectedFinishType} desktop />
+                  {selectedFinishType === 'framed' && (
+                    <div className="rounded-[8px] border border-current/10 bg-current/5 p-3">
+                      <div className="mb-3">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E7C66]">Frame Style</div>
+                        <div className="mt-1 text-[13px] leading-5 opacity-70">Choose the outer frame finish after selecting framed presentation.</div>
+                      </div>
+                      <FrameOptionRail selectedFrameId={selectedFrameId} setSelectedFrameId={setSelectedFrameId} variant="grid" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1422,6 +1508,7 @@ function DesktopCommerceCreate({
                   <FramedArtwork
                     src={canvasArtworkSrc}
                     alt={studio.selectedConceptReady ? 'Generated Canvas' : 'Uploaded reference photo'}
+                    finishType={selectedFinishType}
                     frameStyle={selectedFrame.color}
                     className="mx-auto"
                     style={getViewportBoundArtworkStyle(
@@ -1460,6 +1547,7 @@ function DesktopCommerceCreate({
                     <FramedArtwork
                       src={studio.selectedConceptReady ? previewConcept.image : null}
                       alt="Canvas in room"
+                      finishType={selectedFinishType}
                       frameStyle={selectedFrame.color}
                       ratioClassName={selectedSizeOption.ratioClassName}
                       isGenerating={studio.isGenerating}
@@ -1509,9 +1597,15 @@ function DesktopCommerceCreate({
                   <span className="font-medium">{selectedSizeOption.metric}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="opacity-70">Frame</span>
-                  <span className="font-medium">{selectedFrame.label}</span>
+                  <span className="opacity-70">Finish</span>
+                  <span className="font-medium">{selectedFinish.label}</span>
                 </div>
+                {selectedFinishType === 'framed' && (
+                  <div className="flex justify-between">
+                    <span className="opacity-70">Frame Style</span>
+                    <span className="font-medium">{selectedFrame.label}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="opacity-70">Preview</span>
                   <span className="font-medium">{studio.selectedConceptReady ? 'Generated' : 'Sample'}</span>
@@ -1534,7 +1628,11 @@ function DesktopCommerceCreate({
                   Continue to Details
                   <ChevronDown className="-rotate-90 opacity-70" size={18} />
                 </button>
-                <button className="w-full py-2 text-sm font-medium opacity-70 underline underline-offset-4 hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={onSaveForLater}
+                  className="w-full py-2 text-sm font-medium opacity-70 underline underline-offset-4 hover:opacity-100"
+                >
                   Save for later
                 </button>
               </div>
@@ -1586,7 +1684,7 @@ function CustomKeywordsField({
 }) {
   return (
     <div className={compact ? 'space-y-3' : 'space-y-3.5'}>
-      <p className="text-sm leading-6 text-[#62584D]">
+      <p className="text-sm leading-[1.45] text-[#62584D]">
         Add mood, lighting, background, texture, or artistic details you want the final preview to emphasize.
       </p>
       <textarea
@@ -1722,9 +1820,51 @@ function FrameOptionRail({
   );
 }
 
+function FinishOptionGrid({
+  selectedFinishType,
+  setSelectedFinishType,
+  desktop = false,
+}: {
+  selectedFinishType: FinishType;
+  setSelectedFinishType: (id: FinishType) => void;
+  desktop?: boolean;
+}) {
+  return (
+    <div className={`grid gap-2 ${desktop ? 'grid-cols-1' : 'grid-cols-1'}`}>
+      {finishOptions.map((finish) => {
+        const isActive = selectedFinishType === finish.id;
+        return (
+          <button
+            key={finish.id}
+            type="button"
+            onClick={() => setSelectedFinishType(finish.id)}
+            className={`rounded-[8px] border px-3 py-3 text-left transition ${
+              isActive ? 'border-[#1c1b19] bg-[#F7F2EA] shadow-[0_14px_24px_rgba(40,29,20,0.08)]' : 'border-[#E7DED1] bg-white hover:border-[#ccbba3]'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E7C66]">{finish.label}</div>
+                <div className="mt-1 text-[15px] font-semibold leading-5 text-[#2D241B]">{finish.title}</div>
+                <p className="mt-1.5 text-[13px] leading-5 text-[#62584D]">{finish.description}</p>
+              </div>
+              {isActive && (
+                <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white">
+                  <Check size={11} strokeWidth={3.2} />
+                </div>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function FramedArtwork({
   src,
   alt,
+  finishType,
   frameStyle,
   frameTexture,
   className = '',
@@ -1739,6 +1879,7 @@ function FramedArtwork({
 }: {
   src?: string | null;
   alt: string;
+  finishType: FinishType;
   frameStyle: string;
   frameTexture?: string;
   className?: string;
@@ -1751,6 +1892,41 @@ function FramedArtwork({
   imageClassName?: string;
   artworkOverlay?: React.ReactNode;
 }) {
+  const artwork = (
+    <div className={`relative overflow-hidden bg-[#f7f2ea] ${ratioClassName}`}>
+      {src ? <img src={src} alt={alt} className={`block h-full w-full object-cover transition duration-700 ${imageClassName}`} /> : placeholder ?? <BlankArtworkPlaceholder />}
+      {artworkOverlay}
+      <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(67,46,23,0.12),inset_0_18px_24px_rgba(255,255,255,0.04),inset_0_-10px_18px_rgba(0,0,0,0.04)]" />
+    </div>
+  );
+
+  if (finishType === 'rolled-canvas') {
+    return (
+      <div
+        className={`relative w-full overflow-hidden bg-[#f4eadb] p-[10px] shadow-[0_18px_34px_rgba(38,28,18,0.16),0_4px_10px_rgba(38,28,18,0.08)] ${className}`}
+        style={style}
+      >
+        <div className="border border-[#d8cab6] bg-[#fffdfa] p-[12px]">{artwork}</div>
+        {isGenerating && <GenerationOverlay progress={generationProgress} phase={generationPhase} />}
+      </div>
+    );
+  }
+
+  if (finishType === 'gallery-wrap') {
+    return (
+      <div
+        className={`relative w-full overflow-hidden bg-[linear-gradient(135deg,#c9b391_0%,#9f8763_55%,#d6c1a0_100%)] p-[7px] shadow-[0_22px_40px_rgba(38,28,18,0.18),0_5px_12px_rgba(38,28,18,0.12)] ${className}`}
+        style={style}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),transparent_30%,rgba(73,54,34,0.12)_100%)]" />
+        <div className="relative bg-[#efe3d2] p-[7px] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),inset_0_-2px_4px_rgba(85,62,39,0.10)]">
+          {artwork}
+        </div>
+        {isGenerating && <GenerationOverlay progress={generationProgress} phase={generationPhase} />}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative w-full overflow-hidden p-[12px] shadow-[0_24px_46px_rgba(38,28,18,0.3),0_5px_12px_rgba(38,28,18,0.22)] ${className}`}
@@ -1774,11 +1950,7 @@ function FramedArtwork({
           )}
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(255,255,255,0.28),transparent_18%,transparent_56%,rgba(82,58,32,0.1)_76%,rgba(35,25,17,0.14)_100%)]" />
           <div className="bg-[#efe6d7] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-1px_0_rgba(154,125,88,0.18)]">
-            <div className={`relative overflow-hidden bg-[#f7f2ea] ${ratioClassName}`}>
-              {src ? <img src={src} alt={alt} className={`block h-full w-full object-cover transition duration-700 ${imageClassName}`} /> : placeholder ?? <BlankArtworkPlaceholder />}
-              {artworkOverlay}
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(67,46,23,0.12),inset_0_18px_24px_rgba(255,255,255,0.04),inset_0_-10px_18px_rgba(0,0,0,0.04)]" />
-            </div>
+            {artwork}
           </div>
         </div>
       </div>

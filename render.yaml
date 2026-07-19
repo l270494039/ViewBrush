@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: piktura
+    name: viewbrush
     runtime: node
     plan: free
     buildCommand: npm install && npm run build

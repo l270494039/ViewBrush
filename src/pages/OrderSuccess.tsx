@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { ArrowRight, BadgeCheck, CheckCircle2, PackageCheck, Sparkles, Truck } from 'lucide-react';
+import { getPresentationSummary } from '../data/presentationOptions';
 import { getBadgeClasses, getButtonClasses, getHeadingFont } from '../utils/theme';
 import type { CheckoutSubmission } from './Checkout';
 import type { PaymentDetailsPayload } from './PaymentDetails';
@@ -9,13 +10,16 @@ export default function OrderSuccess({
   order,
   onReturnHome,
   onCreateAnother,
+  onViewAccount,
 }: {
   selection: PaymentDetailsPayload;
   order: CheckoutSubmission;
   onReturnHome: () => void;
   onCreateAnother: () => void;
+  onViewAccount: () => void;
 }) {
-  const orderNumber = `PK-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}`;
+  const orderNumber = `VB-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}`;
+  const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
 
   return (
     <div className="min-h-screen w-full bg-[#f7f2ea] text-[#2d241b]">
@@ -51,7 +55,7 @@ export default function OrderSuccess({
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8f816c]">What happens next</p>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
                 <TimelineStep index="01" title="Confirmation email" body={`Sent to ${order.email || 'your inbox'} with the order summary.`} />
-                <TimelineStep index="02" title="Artist preparation" body="The studio reviews the preview, note, frame, and size selections." />
+                <TimelineStep index="02" title="Artist preparation" body="The studio reviews the preview, note, presentation, and size selections." />
                 <TimelineStep index="03" title="Painting & delivery" body="We complete the artwork and send tracking once it ships." />
               </div>
             </div>
@@ -65,7 +69,7 @@ export default function OrderSuccess({
                   <img src={selection.conceptImage ?? selection.sourceImage} alt={selection.conceptTitle} className="h-24 w-24 border border-[#e6dbcf] object-cover" />
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold">{selection.conceptTitle}</p>
-                    <p className="mt-1 text-sm text-[#6e6254]">{selection.size} · {selection.frameLabel}</p>
+                    <p className="mt-1 text-sm text-[#6e6254]">{selection.size} · {presentationSummary}</p>
                     <p className="mt-1 text-sm text-[#6e6254]">{order.country}</p>
                   </div>
                 </div>
@@ -79,12 +83,15 @@ export default function OrderSuccess({
               </div>
 
               <div className="mt-6 flex flex-col gap-3">
-                <button onClick={onReturnHome} className={`${getButtonClasses('primary', 'w-full justify-center py-4 text-sm')} gap-2`}>
-                  Return Home
+                <button onClick={onViewAccount} className={`${getButtonClasses('primary', 'w-full justify-center py-4 text-sm')} gap-2`}>
+                  View Order In Account
                   <ArrowRight size={16} />
                 </button>
                 <button onClick={onCreateAnother} className={`${getButtonClasses('outline', 'w-full justify-center py-4 text-sm')}`}>
                   Start Another Portrait
+                </button>
+                <button onClick={onReturnHome} className="w-full py-2 text-sm font-medium text-[#6e6254] underline underline-offset-4 transition hover:text-[#2d241b]">
+                  Return Home
                 </button>
               </div>
             </div>

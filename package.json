@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "viewbrush",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "node": ">=20 <25"
   },
   "scripts": {
-    "dev": "HOST=${PIKTURA_HOST:-127.0.0.1} PORT=${PIKTURA_PORT:-3001} DISABLE_HMR=${DISABLE_HMR:-false} node --import tsx server.ts",
+    "dev": "HOST=${VIEWBRUSH_HOST:-127.0.0.1} PORT=${VIEWBRUSH_PORT:-3001} DISABLE_HMR=${DISABLE_HMR:-false} node --import tsx server.ts",
     "dev:start": "zsh scripts/dev-server.sh start",
     "dev:stop": "zsh scripts/dev-server.sh stop",
     "dev:restart": "zsh scripts/dev-server.sh restart",
