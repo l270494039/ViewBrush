@@ -10,13 +10,16 @@ import Checkout, { type CheckoutSubmission } from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import Faq from './pages/Faq';
 import RefundPolicy from './pages/RefundPolicy';
+import ContactUs from './pages/ContactUs';
 import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
 import Materials from './pages/Materials';
 import Cart from './pages/Cart';
 import Account, { type AccountOrderSnapshot } from './pages/Account';
+import { defaultMockCustomer, mockAccountStorageKey, type MockCustomer } from './data/mockAccount';
 
-type AppRoute = 'home' | 'create' | 'cart' | 'account' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'materials' | 'faq' | 'refund';
+type AppRoute = 'home' | 'create' | 'cart' | 'account' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'materials' | 'faq' | 'refund' | 'contact';
+type AccountEntryView = 'account' | 'orders';
 
 const cartStorageKey = 'viewbrush-saved-artwork';
 const accountOrderStorageKey = 'viewbrush-latest-order';
@@ -34,6 +37,7 @@ const routeHashMap: Record<AppRoute, string> = {
   materials: '#materials',
   faq: '#faq',
   refund: '#refund-policy',
+  contact: '#contact-us',
 };
 
 function getRouteFromHash(hash: string): AppRoute {
@@ -66,6 +70,9 @@ function getRouteFromHash(hash: string): AppRoute {
     case 'refund':
     case 'refund-policy':
       return 'refund';
+    case 'contact':
+    case 'contact-us':
+      return 'contact';
     default:
       return 'home';
   }
@@ -97,6 +104,35 @@ function getSavedLatestOrder(): AccountOrderSnapshot | null {
   }
 }
 
+function getSavedMockCustomer(): MockCustomer | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const savedCustomer = window.localStorage.getItem(mockAccountStorageKey);
+    return savedCustomer ? { ...defaultMockCustomer, ...JSON.parse(savedCustomer) } : null;
+  } catch {
+    return null;
+  }
+}
+
+function createMockCustomerFromEmail(email: string): MockCustomer {
+  const normalizedEmail = email.trim() || defaultMockCustomer.email;
+  const localPart = normalizedEmail.split('@')[0] || 'viewbrush customer';
+  const nameParts = localPart
+    .split(/[._-]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const firstName = nameParts[0] ? nameParts[0][0].toUpperCase() + nameParts[0].slice(1) : defaultMockCustomer.firstName;
+  const lastName = nameParts[1] ? nameParts[1][0].toUpperCase() + nameParts[1].slice(1) : defaultMockCustomer.lastName;
+
+  return {
+    firstName,
+    lastName,
+    email: normalizedEmail,
+    memberSince: defaultMockCustomer.memberSince,
+  };
+}
+
 function AppContent() {
   const [route, setRoute] = useState<AppRoute>('create');
   const [isRouteReady, setIsRouteReady] = useState(false);
@@ -104,6 +140,9 @@ function AppContent() {
   const [cartSelection, setCartSelection] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection());
   const [latestOrder, setLatestOrder] = useState<AccountOrderSnapshot | null>(() => getSavedLatestOrder());
   const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(null);
+  const [cartResetKey, setCartResetKey] = useState(0);
+  const [mockCustomer, setMockCustomer] = useState<MockCustomer | null>(() => getSavedMockCustomer());
+  const [accountEntryView, setAccountEntryView] = useState<AccountEntryView>('account');
   const isStudioRoute = route === 'create' || route === 'details' || route === 'checkout' || route === 'success';
 
   useEffect(() => {
@@ -138,6 +177,7 @@ function AppContent() {
       route === 'cart' ||
       route === 'account' ||
       route === 'refund' ||
+      route === 'contact' ||
       route === 'details' ||
       route === 'checkout' ||
       route === 'success'
@@ -147,8 +187,36 @@ function AppContent() {
   }, [isRouteReady, route]);
 
   const navigate = (nextRoute: AppRoute) => {
+    if (nextRoute === 'cart') {
+      setCartResetKey((current) => current + 1);
+    }
     setRoute(nextRoute);
   };
+
+  const navigateToAccount = (entryView: AccountEntryView = 'account') => {
+    setAccountEntryView(entryView);
+    navigate('account');
+  };
+
+  const handleNavigate = (nextRoute: AppRoute) => {
+    if (nextRoute === 'account') {
+      navigateToAccount('account');
+      return;
+    }
+    navigate(nextRoute);
+  };
+
+  useEffect(() => {
+    if (!isRouteReady || route !== 'account' || mockCustomer) return;
+
+    if (latestOrder) {
+      const recoveredCustomer = createMockCustomerFromEmail(latestOrder.order.email);
+      setMockCustomer(recoveredCustomer);
+      window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(recoveredCustomer));
+      return;
+    }
+
+  }, [isRouteReady, latestOrder, mockCustomer, route]);
 
   const saveCartSelection = (selection: PaymentDetailsPayload) => {
     setPaymentDetails(selection);
@@ -162,14 +230,29 @@ function AppContent() {
     window.localStorage.removeItem(cartStorageKey);
   };
 
+  const handleMockSignIn = (customer: MockCustomer) => {
+    setAccountEntryView('account');
+    setMockCustomer(customer);
+    window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(customer));
+    navigate('account');
+  };
+
+  const handleMockSignOut = () => {
+    setMockCustomer(null);
+    window.localStorage.removeItem(mockAccountStorageKey);
+    navigate('cart');
+  };
+
   if (!isRouteReady) {
     return null;
   }
 
+  const isCartRoute = route === 'cart';
+
   return (
-    <div className={`min-h-screen transition-colors duration-500 flex flex-col ${getBgClasses('main')}`}>
-      {!isStudioRoute && <Navbar currentRoute={route} onNavigate={navigate} />}
-      <main className="flex-1 flex flex-col w-full relative">
+    <div className={`transition-colors duration-500 flex flex-col ${isCartRoute ? 'min-h-screen bg-[#FBF8F3]' : `min-h-screen ${getBgClasses('main')}`}`}>
+      {!isStudioRoute && <Navbar currentRoute={route} hasCartItems={Boolean(cartSelection)} onNavigate={handleNavigate} />}
+      <main className="relative flex w-full flex-1 flex-col">
         {route === 'home' && <Home onNavigate={navigate} />}
         {route === 'about' && <About onNavigate={navigate} />}
         {route === 'how' && <HowItWorks onNavigate={navigate} />}
@@ -177,6 +260,8 @@ function AppContent() {
         {route === 'cart' && (
           <Cart
             selection={cartSelection}
+            resetKey={cartResetKey}
+            customer={mockCustomer}
             onCreate={() => navigate('create')}
             onEdit={() => navigate('create')}
             onClear={clearCartSelection}
@@ -185,20 +270,38 @@ function AppContent() {
               setPaymentDetails(cartSelection);
               navigate('checkout');
             }}
-            onAccount={() => navigate('account')}
+            onAccount={handleMockSignIn}
             onHelp={() => navigate('faq')}
           />
         )}
-        {route === 'account' && (
+        {route === 'account' && mockCustomer && (
           <Account
+            customer={mockCustomer}
             savedSelection={cartSelection}
             latestOrder={latestOrder}
+            initialView={accountEntryView}
             onCreate={() => navigate('create')}
             onOpenCart={() => navigate('cart')}
+            onSignOut={handleMockSignOut}
+          />
+        )}
+        {route === 'account' && !mockCustomer && !latestOrder && (
+          <Cart
+            selection={null}
+            resetKey={cartResetKey}
+            emptyContext="account"
+            customer={mockCustomer}
+            onCreate={() => navigate('create')}
+            onEdit={() => navigate('create')}
+            onClear={clearCartSelection}
+            onCheckout={() => undefined}
+            onAccount={handleMockSignIn}
+            onHelp={() => navigate('faq')}
           />
         )}
         {route === 'faq' && <Faq onNavigate={navigate} />}
         {route === 'refund' && <RefundPolicy onNavigate={navigate} />}
+        {route === 'contact' && <ContactUs />}
         {route === 'create' && (
           <Create
             onNavigate={navigate}
@@ -229,9 +332,13 @@ function AppContent() {
               onBack={() => navigate('details')}
               onComplete={(submission) => {
                 const orderSnapshot = { selection: paymentDetails, order: submission };
+                const nextCustomer = mockCustomer ?? createMockCustomerFromEmail(submission.email);
                 setCheckoutOrder(submission);
                 setLatestOrder(orderSnapshot);
+                setMockCustomer(nextCustomer);
+                setAccountEntryView('orders');
                 setCartSelection(null);
+                window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(nextCustomer));
                 window.localStorage.setItem(accountOrderStorageKey, JSON.stringify(orderSnapshot));
                 window.localStorage.removeItem(cartStorageKey);
                 navigate('success');
@@ -262,7 +369,7 @@ function AppContent() {
                 setCheckoutOrder(null);
                 navigate('create');
               }}
-              onViewAccount={() => navigate('account')}
+              onViewAccount={() => navigateToAccount('orders')}
             />
           )}
       </main>

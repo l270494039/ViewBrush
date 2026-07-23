@@ -69,8 +69,8 @@ const processNotes = [
 export default function HowItWorks({ onNavigate }: { onNavigate: (route: InfoRoute) => void }) {
   return (
     <div className="flex w-full flex-col pt-16">
-      <section className="relative min-h-[84vh] overflow-hidden border-b border-[#DCCFBC] bg-[#F6F0E7]">
-        <div className="relative mx-auto grid min-h-[calc(84vh-4rem)] max-w-[1600px] items-center gap-10 px-6 py-14 lg:grid-cols-[0.96fr_1.04fr] lg:px-10">
+      <section className="relative min-h-[72vh] overflow-hidden border-b border-[#DCCFBC] bg-[#F6F0E7]">
+        <div className="relative mx-auto grid min-h-[calc(72vh-4rem)] max-w-[1600px] items-center gap-10 px-6 py-10 lg:grid-cols-[0.96fr_1.04fr] lg:px-10">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-[760px]">
             <h1 className="max-w-[14ch] text-5xl font-semibold leading-[1.02] tracking-[-0.05em] text-[#241C16] md:text-7xl">
               From a photo you love to a painting made by hand.
@@ -116,7 +116,7 @@ export default function HowItWorks({ onNavigate }: { onNavigate: (route: InfoRou
               </div>
 
               <div className="overflow-hidden border border-[#E0D3C2] bg-[#ECE2D5] p-3 shadow-[0_28px_70px_rgba(42,31,22,0.14)]">
-                <img src={imgPreviewRoom} alt="Painting preview in a room" className="h-[400px] w-full object-cover md:h-[500px]" />
+                <img src={imgPreviewRoom} alt="Painting preview in a room" className="h-[340px] w-full object-cover md:h-[440px]" />
               </div>
 
               <div className="absolute -bottom-6 right-[4%] z-20 w-44 rounded-[10px] border border-[#E0D4C5] bg-[#FBF8F3]/92 p-3 shadow-[0_18px_36px_rgba(43,31,21,0.12)] backdrop-blur md:w-56">

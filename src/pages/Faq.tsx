@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown, Lock, PackageCheck, PenSquare } from 'lucide-react';
-
-import imgHeroBg from '../assets/images/hero_painting_gallery_minimal_20260530.png';
+import {
+  BadgeQuestionMark,
+  ChevronDown,
+  CircleQuestionMark,
+  FileQuestionMark,
+  MessageCircleQuestionMark,
+  MessageSquareText,
+  Search,
+} from 'lucide-react';
 
 type InfoRoute = 'home' | 'create' | 'faq' | 'refund';
 
@@ -18,24 +24,6 @@ type FaqGroup = {
   eyebrow: string;
   items: FaqEntry[];
 };
-
-const highlightNotes = [
-  {
-    title: 'Preview before shipping',
-    body: 'You can review the finished creation before it is packed and sent out.',
-    Icon: PenSquare,
-  },
-  {
-    title: 'Reasonable revisions included',
-    body: 'Small refinements based on your original photo and approved direction are part of the process.',
-    Icon: PackageCheck,
-  },
-  {
-    title: 'Your original photo stays private',
-    body: 'We never publish your source photo. Finished artwork is only shared with your permission.',
-    Icon: Lock,
-  },
-];
 
 const faqGroups: FaqGroup[] = [
   {
@@ -187,77 +175,107 @@ const faqGroups: FaqGroup[] = [
   },
 ];
 
-export default function Faq({ onNavigate }: { onNavigate: (route: InfoRoute) => void }) {
+const heroDecorations = [
+  { Icon: MessageCircleQuestionMark, className: 'left-[6%] top-[18%] h-20 w-20 md:h-28 md:w-28' },
+  { Icon: Search, className: 'bottom-[12%] left-[20%] h-14 w-14 md:h-20 md:w-20' },
+  { Icon: FileQuestionMark, className: 'right-[8%] top-[16%] h-16 w-16 md:h-24 md:w-24' },
+  { Icon: MessageSquareText, className: 'bottom-[10%] right-[23%] h-14 w-14 md:h-20 md:w-20' },
+  { Icon: CircleQuestionMark, className: 'right-[42%] top-[8%] hidden h-12 w-12 md:block md:h-16 md:w-16' },
+  { Icon: BadgeQuestionMark, className: 'bottom-[6%] left-[43%] hidden h-12 w-12 md:block md:h-16 md:w-16' },
+];
+
+export default function Faq({ onNavigate: _onNavigate }: { onNavigate: (route: InfoRoute) => void }) {
   const [openItemId, setOpenItemId] = useState(faqGroups[0].items[0]?.id ?? '');
+  const [activeGroupId, setActiveGroupId] = useState(faqGroups[0]?.id ?? '');
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const updateActiveGroup = () => {
+      const triggerY = Math.min(220, window.innerHeight * 0.28);
+      let nextGroupId = faqGroups[0]?.id ?? '';
+
+      for (const group of faqGroups) {
+        const section = document.getElementById(group.id);
+        if (section && section.getBoundingClientRect().top <= triggerY) {
+          nextGroupId = group.id;
+        }
+      }
+
+      setActiveGroupId((current) => (current === nextGroupId ? current : nextGroupId));
+    };
+
+    const handleScroll = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateActiveGroup);
+    };
+
+    updateActiveGroup();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const navigateToGroup = (groupId: string) => {
+    setActiveGroupId(groupId);
+    document.getElementById(groupId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="flex w-full flex-col pt-16">
-      <section className="relative min-h-[78vh] overflow-hidden border-b border-[#DCCFBC] bg-[#F6F0E7]">
-        <div className="absolute inset-0">
-          <img src={imgHeroBg} alt="Curated gallery interior" className="h-full w-full object-cover object-center" />
-          <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(246,240,231,0.98)_0%,rgba(246,240,231,0.9)_42%,rgba(246,240,231,0.3)_72%,rgba(246,240,231,0.12)_100%)]" />
+      <section className="relative min-h-[280px] overflow-hidden border-b border-[#D7C7B8] bg-[#F1E8DC] md:min-h-[340px]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden text-[#A58F78]">
+          {heroDecorations.map(({ Icon, className }, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 0.2, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.08 * index }}
+              className={`absolute ${className}`}
+            >
+              <Icon className="h-full w-full" strokeWidth={1.15} />
+            </motion.div>
+          ))}
         </div>
-        <div className="relative mx-auto flex min-h-[calc(78vh-4rem)] max-w-[1600px] items-center px-6 py-10 lg:px-10 lg:py-14">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-[760px]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#897A67]">Frequently Asked Questions</p>
-            <h1 className="mt-4 max-w-[14ch] text-5xl font-semibold leading-[1.02] tracking-[-0.05em] text-[#241C16] md:text-7xl">
-              Questions answered before the brush dries.
+        <div className="relative mx-auto flex min-h-[280px] max-w-[1600px] items-center justify-center px-6 py-10 text-center md:min-h-[340px] lg:px-10">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65 }}>
+            <h1 className="mx-auto whitespace-nowrap text-2xl font-semibold leading-[1.02] tracking-[-0.05em] text-[#241C16] sm:text-4xl md:text-5xl lg:text-[64px]">
+              Frequently Asked Questions
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-[#53493E] md:text-lg">
-              Everything here is written to make the process feel straightforward: privacy, previews, revisions, refunds, shipping, and what to expect from handmade work.
-            </p>
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-              <button
-                onClick={() => onNavigate('create')}
-                className="button-lift inline-flex items-center justify-center rounded-[8px] bg-[#31271F] px-8 py-4 text-sm font-semibold tracking-[0.02em] text-[#FBF8F3] transition hover:bg-[#241C16]"
-              >
-                Start Your Painting
-              </button>
-              <button
-                onClick={() => onNavigate('refund')}
-                className="button-lift inline-flex items-center justify-center rounded-[8px] border border-[#DCCFBC] bg-white/72 px-8 py-4 text-sm font-medium text-[#31271F] transition hover:bg-[#F3EBDE]"
-              >
-                Read Refund Policy
-              </button>
-            </div>
           </motion.div>
         </div>
       </section>
 
-      <section className="border-b border-[#DCCFBC] bg-[#EEE5D8] px-6 py-8 lg:px-10">
-        <div className="mx-auto grid max-w-[1600px] gap-6 md:grid-cols-3">
-          {highlightNotes.map(({ title, body, Icon }, index) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
-              className="border border-[#D8CBB8] bg-[#F8F3EB] p-5"
-            >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#31271F] text-[#FBF8F3]">
-                <Icon size={18} />
-              </div>
-              <h2 className="mt-4 text-xl font-semibold tracking-tight text-[#241C16]">{title}</h2>
-              <p className="mt-2 max-w-[32ch] text-sm leading-6 text-[#5F564A]">{body}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      <section className="bg-[#FBF8F3] px-6 py-14 lg:px-10 lg:py-24">
+        <div className="mx-auto grid min-w-0 max-w-[1600px] gap-10 lg:grid-cols-3 lg:gap-6">
+          <nav aria-label="FAQ categories" className="min-w-0 lg:sticky lg:top-24 lg:max-w-[340px] lg:self-start">
+            <div className="hide-scrollbar flex w-full min-w-0 overflow-x-auto border-b border-[#D7C7B8] lg:flex-col lg:gap-1 lg:border-b-0 lg:pr-8">
+              {faqGroups.map((group) => {
+                const isActive = activeGroupId === group.id;
 
-      <section className="bg-[#FBF8F3] px-6 py-18 lg:px-10 lg:py-24">
-        <div className="mx-auto grid max-w-[1600px] gap-12 lg:grid-cols-3 lg:gap-6">
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#8D816F]">At A Glance</p>
-            <h2 className="mt-4 max-w-[12ch] text-4xl font-semibold leading-tight tracking-[-0.04em] text-[#241C16] md:text-5xl">
-              Clear answers for every step of the order.
-            </h2>
-            <p className="mt-5 max-w-md text-base leading-7 text-[#5C5247]">
-              Scan the section that matches your question, or read through the whole flow from upload to delivery.
-            </p>
-          </div>
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => navigateToGroup(group.id)}
+                    aria-current={isActive ? 'location' : undefined}
+                    className={`shrink-0 border-b-2 px-3 py-3 text-left text-sm font-medium transition-colors lg:w-full lg:border-b-0 lg:border-l-2 lg:px-5 lg:py-3.5 ${
+                      isActive
+                        ? 'border-[#8B6F58] bg-[#F1E7DC] text-[#241C16]'
+                        : 'border-transparent text-[#786C5D] hover:bg-[#F5EEE6] hover:text-[#241C16]'
+                    }`}
+                  >
+                    {group.eyebrow}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
 
-          <div className="border-t border-[#DCCFBC] lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             {faqGroups.map((group, groupIndex) => (
               <motion.section
                 id={group.id}
@@ -266,19 +284,24 @@ export default function Faq({ onNavigate }: { onNavigate: (route: InfoRoute) => 
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.18 }}
                 transition={{ duration: 0.45, delay: groupIndex * 0.03 }}
-                className="scroll-mt-24 border-b border-[#DCCFBC]"
+                className="scroll-mt-28 pb-20 last:pb-0 md:pb-24"
               >
-                <div className="py-8 md:py-10">
-                  <h3 className="text-xl font-semibold leading-7 text-[#8A7D6C] md:text-[22px]">{group.eyebrow}</h3>
+                <div>
+                  <h2 className="border-b border-[#D7C7B8] pb-5 text-xl font-semibold leading-7 text-[#241C16] md:text-[22px]">
+                    {group.eyebrow}
+                  </h2>
 
-                  <div className="mt-4">
+                  <div>
                     {group.items.map((item) => {
                       const isOpen = openItemId === item.id;
 
                       return (
-                        <div key={item.id} className="border-t border-[#E7DDCE] first:border-t-0">
+                        <div key={item.id} className="border-b border-[#D7C7B8]">
                           <button
-                            onClick={() => setOpenItemId(isOpen ? '' : item.id)}
+                            onClick={() => {
+                              setOpenItemId(isOpen ? '' : item.id);
+                              setActiveGroupId(group.id);
+                            }}
                             className="group flex w-full items-start justify-between gap-6 py-5 text-left"
                             aria-expanded={isOpen}
                           >
@@ -324,7 +347,6 @@ export default function Faq({ onNavigate }: { onNavigate: (route: InfoRoute) => 
           </div>
         </div>
       </section>
-
     </div>
   );
 }

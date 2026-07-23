@@ -10,7 +10,6 @@ type NavItem = { label: string; route: NavRoute | 'materials' };
 const navItems: NavItem[] = [
   { label: 'Home', route: 'home' },
   { label: 'How It Works', route: 'how' },
-  { label: 'Materials', route: 'materials' },
   { label: 'FAQ', route: 'faq' },
   { label: 'About ViewBrush', route: 'about' },
 ];
@@ -20,8 +19,16 @@ const utilityItems = [
   { label: 'Cart', Icon: ShoppingBag },
 ];
 
-export default function Navbar({ currentRoute, onNavigate }: { currentRoute: NavRoute | 'materials', onNavigate: (r: NavRoute | 'materials') => void }) {
-  const ctaLabel = 'Open The Gallery';
+export default function Navbar({
+  currentRoute,
+  hasCartItems,
+  onNavigate,
+}: {
+  currentRoute: NavRoute | 'materials';
+  hasCartItems: boolean;
+  onNavigate: (r: NavRoute | 'materials') => void;
+}) {
+  const ctaLabel = 'Create Artwork';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -40,7 +47,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
   return (
     <>
       <nav className="fixed top-0 z-40 w-full border-b border-[#D8CDBB] bg-[#F6F0E7]/92 backdrop-blur-md transition-all duration-300">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6 lg:px-10">
           <div className="flex min-w-0 items-center">
             <button
               type="button"
@@ -53,7 +60,7 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             </button>
           </div>
 
-          <ul className="ml-auto hidden items-center justify-end gap-6 pr-8 text-sm font-medium lg:flex">
+          <ul className="ml-auto hidden items-center justify-end gap-8 pr-8 text-[16px] font-medium lg:flex xl:pr-10">
             {navItems.map((item) => (
               <li key={item.label}>
                 <button
@@ -63,8 +70,8 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
                     'route' in item && item.route === currentRoute
                       ? 'text-[#31271F]'
                       : 'route' in item
-                        ? 'text-[#6B6155]/70 hover:text-[#31271F]'
-                        : 'text-[#6B6155]/70 hover:text-[#31271F]'
+                        ? 'text-[#6B6155]/82 hover:text-[#31271F]'
+                        : 'text-[#6B6155]/82 hover:text-[#31271F]'
                   }`}
                 >
                   {item.label}
@@ -73,12 +80,16 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
             ))}
           </ul>
 
-          <div className="flex items-center justify-end gap-2.5 md:gap-4">
+          <div className="flex items-center justify-end gap-3 md:gap-4 lg:gap-5">
             <button
               type="button"
               aria-label="Account"
               onClick={() => onNavigate('account')}
-              className="hidden text-[#5F564A] opacity-75 transition hover:opacity-100 lg:inline-flex"
+              className={`hidden transition-colors lg:inline-flex ${
+                currentRoute === 'account'
+                  ? 'text-[#31271F]'
+                  : 'text-[#5F564A]/88 hover:text-[#31271F]'
+              }`}
             >
               <User size={18} />
             </button>
@@ -86,10 +97,14 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
               type="button"
               aria-label="Cart"
               onClick={() => onNavigate('cart')}
-              className="relative hidden text-[#5F564A] opacity-75 transition hover:opacity-100 lg:inline-flex"
+              className={`relative hidden transition-colors lg:inline-flex ${
+                currentRoute === 'cart'
+                  ? 'text-[#31271F]'
+                  : 'text-[#5F564A]/88 hover:text-[#31271F]'
+              }`}
             >
               <ShoppingBag size={18} />
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#A58964]" />
+              {hasCartItems && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#D12B2B]" />}
             </button>
             <button
               onClick={() => onNavigate('create')}
@@ -155,8 +170,11 @@ export default function Navbar({ currentRoute, onNavigate }: { currentRoute: Nav
                   }}
                   className="flex w-full items-center gap-3 rounded-[8px] px-4 py-3 text-left text-sm text-[#2D241B] transition hover:bg-[#F3EBDE]"
                 >
-                  <Icon size={16} className="text-[#6B6155]" />
-                  <span>{label}</span>
+                  <span className="relative inline-flex items-center gap-3">
+                    <Icon size={16} className="text-[#6B6155]" />
+                    <span>{label}</span>
+                    {label === 'Cart' && hasCartItems && <span className="h-2 w-2 rounded-full bg-[#D12B2B]" />}
+                  </span>
                 </button>
               ))}
             </div>

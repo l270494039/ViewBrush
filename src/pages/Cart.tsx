@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { getPresentationSummary, type FinishType } from '../data/presentationOptions';
 import { getBadgeClasses, getButtonClasses, getHeadingFont } from '../utils/theme';
+import { defaultMockCustomer, type MockCustomer } from '../data/mockAccount';
 import type { PaymentDetailsPayload } from './PaymentDetails';
 
 const priceRows = [
@@ -27,6 +28,9 @@ const confidenceNotes = [
 
 export default function Cart({
   selection,
+  resetKey,
+  emptyContext = 'bag',
+  customer,
   onCreate,
   onEdit,
   onClear,
@@ -35,17 +39,62 @@ export default function Cart({
   onHelp,
 }: {
   selection: PaymentDetailsPayload | null;
+  resetKey?: number;
+  emptyContext?: 'bag' | 'account';
+  customer: MockCustomer | null;
   onCreate: () => void;
   onEdit: () => void;
   onClear: () => void;
   onCheckout: () => void;
-  onAccount: () => void;
+  onAccount: (customer: MockCustomer) => void;
   onHelp: () => void;
 }) {
   const [view, setView] = useState<'canvas' | 'room'>('canvas');
+  const [emptyStateView, setEmptyStateView] = useState<'bag' | 'login' | 'create-account' | 'forgot-password'>('bag');
+
+  useEffect(() => {
+    if (!selection) {
+      setEmptyStateView('bag');
+    }
+  }, [emptyContext, resetKey, selection]);
+
+  useEffect(() => {
+    if (!selection) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+  }, [emptyStateView, selection]);
 
   if (!selection) {
-    return <EmptyArtworkBag onCreate={onCreate} onAccount={onAccount} onHelp={onHelp} />;
+    if (emptyStateView === 'login') {
+      return (
+        <CustomerLogin
+          customer={customer}
+          onAccount={onAccount}
+          onCreateAccount={() => setEmptyStateView('create-account')}
+          onForgotPassword={() => setEmptyStateView('forgot-password')}
+        />
+      );
+    }
+
+    if (emptyStateView === 'create-account') {
+      return <CreateCustomerAccount onAccount={onAccount} />;
+    }
+
+    if (emptyStateView === 'forgot-password') {
+      return <PasswordRecovery onBackToSignIn={() => setEmptyStateView('login')} />;
+    }
+
+    return (
+      <EmptyArtworkBag
+        context={emptyContext}
+        customer={customer}
+        onCreate={onCreate}
+        onCreateAccount={() => setEmptyStateView('create-account')}
+        onSignIn={() => setEmptyStateView('login')}
+        onViewAccount={() => customer && onAccount(customer)}
+        onHelp={onHelp}
+      />
+    );
   }
 
   return (
@@ -216,55 +265,72 @@ export default function Cart({
 }
 
 function EmptyArtworkBag({
+  context,
+  customer,
   onCreate,
-  onAccount,
+  onCreateAccount,
+  onSignIn,
+  onViewAccount,
   onHelp,
 }: {
+  context: 'bag' | 'account';
+  customer: MockCustomer | null;
   onCreate: () => void;
-  onAccount: () => void;
+  onCreateAccount: () => void;
+  onSignIn: () => void;
+  onViewAccount: () => void;
   onHelp: () => void;
 }) {
+  const isSignedIn = Boolean(customer);
+  const isAccountContext = context === 'account';
+  const title = isAccountContext ? 'Sign in to your personal center.' : 'Your artwork bag is empty.';
+  const body = isAccountContext
+    ? 'Sign in to manage your orders, saved artwork, account details, payment methods, and support requests.'
+    : isSignedIn
+      ? 'You do not have any saved artwork yet. Continue creating a portrait or review your account.'
+      : 'Sign in to see whether you have saved artwork, or continue creating a portrait.';
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#FBFAF8] pt-16 text-[#2D241B]">
-      <section className="flex min-h-[420px] flex-1 items-center justify-center px-6 py-14 md:min-h-[520px] md:px-10 md:py-18">
+    <div className="flex min-h-full w-full flex-1 flex-col bg-[#FBF8F3] pt-16 text-[#2D241B]">
+      <section className="flex flex-1 items-center justify-center px-6 py-16 md:px-10">
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
           className="mx-auto flex w-full max-w-[760px] flex-col items-center text-center"
         >
-          <h1 className="max-w-[19ch] text-[2.15rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[#241C16] md:text-[3rem]">
-            Your artwork bag is empty.
+          <h1 className="max-w-[19ch] text-[2.15rem] font-semibold leading-[1.08] text-[#241C16] md:text-[3rem]">
+            {title}
           </h1>
           <p className="mt-4 max-w-[44ch] text-[15px] leading-6 text-[#4F463C] md:text-base md:leading-7">
-            Sign in to see whether you have saved artwork, or continue creating a portrait.
+            {body}
           </p>
           <div className="mt-8 flex w-full max-w-[520px] flex-col items-center justify-center gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={onAccount}
+              onClick={isSignedIn ? onCreate : onSignIn}
               className="inline-flex min-h-[52px] w-full items-center justify-center rounded-[10px] bg-[#31271F] px-6 py-3 text-sm font-semibold text-[#FBF8F3] transition hover:bg-[#241C16] sm:w-[250px]"
             >
-              View Account
+              {isSignedIn ? 'Continue Creating' : 'Sign in'}
             </button>
             <button
               type="button"
-              onClick={onCreate}
+              onClick={isSignedIn ? onViewAccount : isAccountContext ? onCreateAccount : onCreate}
               className="inline-flex min-h-[52px] w-full items-center justify-center rounded-[10px] border border-[#31271F] bg-transparent px-6 py-3 text-sm font-semibold text-[#31271F] transition hover:bg-[#F3EBDE] sm:w-[250px]"
             >
-              Continue Creating
+              {isSignedIn ? 'View Account' : isAccountContext ? 'Create Account' : 'Continue Creating'}
             </button>
           </div>
         </motion.div>
       </section>
 
-      <section className="border-y border-[#D8CDBB] bg-[#F6F0E7] px-6 py-6 md:px-10">
+      <section className="border-t border-[#D8CDBB] bg-[#FBF8F3] px-6 py-6 md:px-10">
         <div className="mx-auto flex w-full max-w-[760px] flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm leading-6 text-[#3F362D] md:text-[15px]">
           <span>Need more help?</span>
           <button
             type="button"
             onClick={onHelp}
-            className="font-semibold text-[#2D241B] underline decoration-[#A58964] underline-offset-4 hover:text-[#6B563C]"
+            className="font-semibold text-[#2D241B] underline decoration-[#2D241B] decoration-[1px] underline-offset-4 hover:text-[#6B563C] hover:decoration-[#6B563C]"
           >
             Read FAQ
           </button>
@@ -272,6 +338,309 @@ function EmptyArtworkBag({
         </div>
       </section>
     </div>
+  );
+}
+
+function CustomerLogin({
+  customer,
+  onAccount,
+  onCreateAccount,
+  onForgotPassword,
+}: {
+  customer: MockCustomer | null;
+  onAccount: (customer: MockCustomer) => void;
+  onCreateAccount: () => void;
+  onForgotPassword: () => void;
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState(customer?.email ?? defaultMockCustomer.email);
+
+  return (
+    <div className="flex min-h-full w-full flex-1 overflow-x-hidden bg-[#FBF8F3] pt-16 text-[#2D241B]">
+      <section className="flex w-full flex-1 items-center justify-center px-6 py-16 md:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="mx-auto w-full max-w-[620px]"
+        >
+          <div className="text-center">
+            <h1 className="text-[42px] font-semibold leading-[1.08] text-[#241C16]">
+              Customer Login
+            </h1>
+            <h2 className="mt-9 text-[22px] font-semibold text-[#241C16]">
+              Registered Customers
+            </h2>
+            <div className="mx-auto mt-6 h-px w-full max-w-[520px] bg-[#D8C7B8]" />
+            <p className="mx-auto mt-7 max-w-[48ch] text-base leading-7 text-[#2D241B] md:text-lg">
+              If you have an account, sign in with your email address.
+            </p>
+          </div>
+
+          <form
+            className="mx-auto mt-8 max-w-[520px]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onAccount({ ...defaultMockCustomer, email: email.trim() || defaultMockCustomer.email });
+            }}
+          >
+            <label className="block text-left text-lg font-semibold text-[#241C16]">
+              Email <span className="text-[#8F816C]">*</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-3 h-[52px] w-full rounded-[10px] border border-[#CFC4B5] bg-white/80 px-4 text-base text-[#241C16] outline-none transition focus:border-[#31271F] focus:bg-white"
+              />
+            </label>
+
+            <label className="mt-7 block text-left text-lg font-semibold text-[#241C16]">
+              Password <span className="text-[#8F816C]">*</span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                className="mt-3 h-[52px] w-full rounded-[10px] border border-[#CFC4B5] bg-white/80 px-4 text-base text-[#241C16] outline-none transition focus:border-[#31271F] focus:bg-white"
+              />
+            </label>
+
+            <label className="mt-6 flex items-center gap-2 text-left text-base font-medium text-[#2D241B]">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(event) => setShowPassword(event.target.checked)}
+                className="h-5 w-5 rounded-[5px] border border-[#8B8174] accent-[#31271F]"
+              />
+              Show Password
+            </label>
+
+            <button
+              type="submit"
+              className="mt-8 inline-flex min-h-[54px] w-full items-center justify-center rounded-[10px] bg-[#31271F] px-6 py-3 text-base font-semibold text-[#FBF8F3] transition hover:bg-[#241C16]"
+            >
+              Sign In
+            </button>
+          </form>
+
+          <div className="mx-auto mt-8 flex max-w-[620px] flex-col items-center justify-center gap-3 text-center text-base leading-7 text-[#2D241B]">
+            <button type="button" onClick={onForgotPassword} className="font-medium text-[#1267C7] transition hover:text-[#0A4E9A]">
+              Forgot password? ↗
+            </button>
+            <p>
+              Don&apos;t have an account?{' '}
+              <button type="button" onClick={onCreateAccount} className="font-medium text-[#1267C7] transition hover:text-[#0A4E9A]">
+                Create Your ViewBrush Account ↗
+              </button>
+            </p>
+          </div>
+        </motion.div>
+      </section>
+    </div>
+  );
+}
+
+function CreateCustomerAccount({ onAccount }: { onAccount: (customer: MockCustomer) => void }) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="flex min-h-full w-full flex-1 overflow-x-hidden bg-[#FBF8F3] pt-16 text-[#2D241B]">
+      <section className="flex w-full flex-1 items-center justify-center px-6 py-16 md:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="mx-auto w-full max-w-[1120px]"
+        >
+          <h1 className="text-center text-[42px] font-semibold leading-[1.08] text-[#241C16]">
+            Create New Customer Account
+          </h1>
+
+          <form
+            className="mx-auto mt-12 w-full max-w-[760px]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              const firstName = String(formData.get('firstName') || defaultMockCustomer.firstName).trim();
+              const lastName = String(formData.get('lastName') || defaultMockCustomer.lastName).trim();
+              const email = String(formData.get('email') || defaultMockCustomer.email).trim();
+              onAccount({
+                firstName: firstName || defaultMockCustomer.firstName,
+                lastName: lastName || defaultMockCustomer.lastName,
+                email: email || defaultMockCustomer.email,
+                memberSince: defaultMockCustomer.memberSince,
+              });
+            }}
+          >
+            <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2">
+              <RoundedInput label="First Name" name="firstName" required autoComplete="given-name" />
+              <RoundedInput label="Last Name" name="lastName" required autoComplete="family-name" />
+              <RoundedInput label="Email" name="email" required type="email" autoComplete="email" className="sm:col-span-2" />
+              <RoundedInput
+                label="Password"
+                name="password"
+                required
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+              />
+              <RoundedInput
+                label="Confirm Password"
+                name="confirmPassword"
+                required
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+              />
+              <div className="sm:col-span-2">
+                <AccountCheckbox
+                  label="Show Password"
+                  checked={showPassword}
+                  onChange={(checked) => setShowPassword(checked)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-10 flex justify-center">
+              <button
+                type="submit"
+                className="inline-flex min-h-[54px] w-full items-center justify-center rounded-[10px] bg-[#31271F] px-6 py-3 text-base font-semibold text-[#FBF8F3] transition hover:bg-[#241C16]"
+              >
+                Create an Account
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </section>
+    </div>
+  );
+}
+
+function PasswordRecovery({ onBackToSignIn }: { onBackToSignIn: () => void }) {
+  const [email, setEmail] = useState(defaultMockCustomer.email);
+  const [isSent, setIsSent] = useState(false);
+
+  return (
+    <div className="flex min-h-full w-full flex-1 overflow-x-hidden bg-[#FBF8F3] pt-16 text-[#2D241B]">
+      <section className="flex w-full flex-1 items-center justify-center px-6 py-16 md:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="mx-auto w-full max-w-[620px]"
+        >
+          <div className="text-center">
+            <h1 className="text-[42px] font-semibold leading-[1.08] text-[#241C16]">Forgot Password</h1>
+            <h2 className="mt-9 text-[22px] font-semibold text-[#241C16]">Reset your password</h2>
+            <div className="mx-auto mt-6 h-px w-full max-w-[520px] bg-[#D8C7B8]" />
+            <p className="mx-auto mt-7 max-w-[48ch] text-base leading-7 text-[#2D241B] md:text-lg">
+              Enter your email address and we&apos;ll send a password reset link.
+            </p>
+          </div>
+
+          {isSent ? (
+            <div className="mx-auto mt-8 max-w-[520px] rounded-[10px] border border-[#D8C7B8] bg-white/70 px-5 py-5 text-center">
+              <p className="text-base font-semibold text-[#241C16]">Reset link sent</p>
+              <p className="mt-2 text-sm leading-6 text-[#5F564B]">
+                We sent a demo reset link to {email.trim() || defaultMockCustomer.email}.
+              </p>
+              <button
+                type="button"
+                onClick={onBackToSignIn}
+                className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-[10px] bg-[#31271F] px-6 py-3 text-base font-semibold text-[#FBF8F3] transition hover:bg-[#241C16]"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          ) : (
+            <form
+              className="mx-auto mt-8 max-w-[520px]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setIsSent(true);
+              }}
+            >
+              <label className="block text-left text-lg font-semibold text-[#241C16]">
+                Email <span className="text-[#8F816C]">*</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="mt-3 h-[52px] w-full rounded-[10px] border border-[#CFC4B5] bg-white/80 px-4 text-base text-[#241C16] outline-none transition focus:border-[#31271F] focus:bg-white"
+                />
+              </label>
+              <button
+                type="submit"
+                className="mt-8 inline-flex min-h-[54px] w-full items-center justify-center rounded-[10px] bg-[#31271F] px-6 py-3 text-base font-semibold text-[#FBF8F3] transition hover:bg-[#241C16]"
+              >
+                Send Reset Link
+              </button>
+              <button
+                type="button"
+                onClick={onBackToSignIn}
+                className="mt-6 w-full text-center text-base font-medium text-[#1267C7] transition hover:text-[#0A4E9A]"
+              >
+                Back to Sign In ↗
+              </button>
+            </form>
+          )}
+        </motion.div>
+      </section>
+    </div>
+  );
+}
+
+function RoundedInput({
+  label,
+  name,
+  required = false,
+  type = 'text',
+  autoComplete,
+  className = '',
+}: {
+  label: string;
+  name?: string;
+  required?: boolean;
+  type?: string;
+  autoComplete?: string;
+  className?: string;
+}) {
+  return (
+    <label className={`block text-left ${className}`}>
+      <span className="text-lg font-semibold text-[#241C16]">
+        {label} {required && <span className="text-[#8F816C]">*</span>}
+      </span>
+      <input
+        name={name}
+        type={type}
+        required={required}
+        autoComplete={autoComplete}
+        className="mt-3 h-[52px] w-full rounded-[10px] border border-[#CFC4B5] bg-white/80 px-4 text-base text-[#241C16] outline-none transition focus:border-[#31271F] focus:bg-white"
+      />
+    </label>
+  );
+}
+
+function AccountCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-left text-base font-medium text-[#2D241B]">
+      <input
+        type="checkbox"
+        {...(checked === undefined ? {} : { checked })}
+        onChange={(event) => onChange?.(event.target.checked)}
+        className="h-5 w-5 rounded-[5px] border border-[#8B8174] accent-[#31271F]"
+      />
+      <span>{label}</span>
+    </label>
   );
 }
 
