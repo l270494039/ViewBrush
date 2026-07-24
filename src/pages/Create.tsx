@@ -991,6 +991,7 @@ function MobileCommerceCreate({
     { label: 'Details' },
   ];
   const currentStepIndex = studio.selectedConceptReady ? 2 : studio.hasUpload ? 1 : 0;
+  const mobileCreateStartRef = useRef<HTMLDivElement | null>(null);
   const previewSectionRef = useRef<HTMLElement | null>(null);
   const selectedBarRef = useRef<HTMLDivElement | null>(null);
   const styleSectionRef = useRef<HTMLElement | null>(null);
@@ -1063,24 +1064,23 @@ function MobileCommerceCreate({
     });
   };
 
-  const handleMobileGenerate = () => {
+  const handleMobileGenerate = async () => {
     setView('canvas');
 
-    const previewTop = previewSectionRef.current
-      ? window.scrollY + previewSectionRef.current.getBoundingClientRect().top - 8
-      : 0;
+    const startTop = mobileCreateStartRef.current ? window.scrollY + mobileCreateStartRef.current.getBoundingClientRect().top - 8 : 0;
 
     window.scrollTo({
-      top: Math.max(previewTop, 0),
+      top: Math.max(startTop, 0),
       behavior: 'smooth',
     });
 
-    void studio.onGenerate();
+    await new Promise((resolve) => window.setTimeout(resolve, 260));
+    await studio.onGenerate();
   };
 
   return (
     <div className="flex w-full flex-col pb-36">
-      <div className="border-b border-[#E5E1D8] bg-[#F6F0E7]">
+      <div ref={mobileCreateStartRef} className="border-b border-[#E5E1D8] bg-[#F6F0E7]">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4">
           <div className="flex items-start justify-between gap-3">
             <CreateBackButton onNavigate={onNavigate} />
