@@ -17,12 +17,14 @@ import Materials from './pages/Materials';
 import Cart from './pages/Cart';
 import Account, { type AccountOrderSnapshot } from './pages/Account';
 import { defaultMockCustomer, mockAccountStorageKey, type MockCustomer } from './data/mockAccount';
+import imgCreatePlaceholderOptionB from './assets/images/create_placeholder_option_b_20260628.png';
 
 type AppRoute = 'home' | 'create' | 'cart' | 'account' | 'details' | 'checkout' | 'success' | 'about' | 'how' | 'materials' | 'faq' | 'refund' | 'contact';
 type AccountEntryView = 'account' | 'orders';
 
 const cartStorageKey = 'viewbrush-saved-artwork';
 const accountOrderStorageKey = 'viewbrush-latest-order';
+const maxStoredImageLength = 120_000;
 
 const routeHashMap: Record<AppRoute, string> = {
   home: '',
@@ -112,6 +114,33 @@ function getSavedMockCustomer(): MockCustomer | null {
     return savedCustomer ? { ...defaultMockCustomer, ...JSON.parse(savedCustomer) } : null;
   } catch {
     return null;
+  }
+}
+
+function getStorageSafeImage(value: string | null, fallback: string | null): string | null {
+  if (!value) return fallback;
+  if (value.startsWith('data:') || value.startsWith('blob:') || value.length > maxStoredImageLength) return fallback;
+  return value;
+}
+
+function getStorageSafeSelection(selection: PaymentDetailsPayload): PaymentDetailsPayload {
+  const conceptImage = getStorageSafeImage(selection.conceptImage, null);
+  const sourceImage = getStorageSafeImage(selection.sourceImage, conceptImage ?? imgCreatePlaceholderOptionB) ?? imgCreatePlaceholderOptionB;
+  const roomImage = getStorageSafeImage(selection.roomImage, imgCreatePlaceholderOptionB) ?? imgCreatePlaceholderOptionB;
+
+  return {
+    ...selection,
+    conceptImage,
+    sourceImage,
+    roomImage,
+  };
+}
+
+function setLocalStorageItem(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Unable to persist ${key}.`, error);
   }
 }
 
@@ -226,7 +255,7 @@ function AppContent() {
   const saveCartSelection = (selection: PaymentDetailsPayload) => {
     setPaymentDetails(selection);
     setCartSelection(selection);
-    window.localStorage.setItem(cartStorageKey, JSON.stringify(selection));
+    setLocalStorageItem(cartStorageKey, JSON.stringify(getStorageSafeSelection(selection)));
     navigate('cart');
   };
 
@@ -344,6 +373,7 @@ function AppContent() {
               onBack={() => navigate('details')}
               onComplete={(submission) => {
                 const orderSnapshot = { selection: checkoutSelection, order: submission };
+                const storageOrderSnapshot = { selection: getStorageSafeSelection(orderSnapshot.selection), order: submission };
                 const nextCustomer = mockCustomer ?? createMockCustomerFromEmail(submission.email);
                 setPaymentDetails(orderSnapshot.selection);
                 setCheckoutOrder(submission);
@@ -351,8 +381,8 @@ function AppContent() {
                 setMockCustomer(nextCustomer);
                 setAccountEntryView('orders');
                 setCartSelection(null);
-                window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(nextCustomer));
-                window.localStorage.setItem(accountOrderStorageKey, JSON.stringify(orderSnapshot));
+                setLocalStorageItem(mockAccountStorageKey, JSON.stringify(nextCustomer));
+                setLocalStorageItem(accountOrderStorageKey, JSON.stringify(storageOrderSnapshot));
                 window.localStorage.removeItem(cartStorageKey);
                 navigate('success');
               }}
