@@ -73,6 +73,10 @@ export default function Checkout({
 
   const cardComplete = cardNumber.trim().length >= 12 && expiry.trim().length >= 4 && cvv.trim().length >= 3;
   const canSubmit = email.trim() && country.trim() && (paymentMethod === 'card' ? cardComplete : true);
+  const checkoutHint =
+    paymentMethod === 'card'
+      ? 'Add your email and complete card details to enable checkout.'
+      : 'Add your email to enable checkout.';
 
   return (
     <div className="min-h-screen w-full bg-[#f7f2ea] text-[#2d241b]">
@@ -282,23 +286,26 @@ export default function Checkout({
               </div>
 
               {!isMobileViewport && (
-                <button
-                  onClick={() =>
-                    onComplete({
-                      email,
-                      country,
-                      paymentMethod,
-                      deliveryOption,
-                      total,
-                    })
-                  }
-                  disabled={!canSubmit}
-                  className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm')} gap-2`}
-                >
-                  <Wallet size={16} />
-                  Complete Order
-                  <ArrowRight size={16} />
-                </button>
+                <>
+                  <button
+                    onClick={() =>
+                      onComplete({
+                        email,
+                        country,
+                        paymentMethod,
+                        deliveryOption,
+                        total,
+                      })
+                    }
+                    disabled={!canSubmit}
+                    className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm disabled:bg-[#b9afa3] disabled:text-[#f8f3ec] disabled:shadow-none')} gap-2`}
+                  >
+                    <Wallet size={16} />
+                    Complete Order
+                    <ArrowRight size={16} />
+                  </button>
+                  {!canSubmit && <p className="mt-3 text-xs leading-6 text-[#8b7a68]">{checkoutHint}</p>}
+                </>
               )}
             </div>
           </aside>
@@ -319,12 +326,13 @@ export default function Checkout({
                 })
               }
               disabled={!canSubmit}
-              className={`${getButtonClasses('primary', 'flex w-full items-center justify-center gap-2 py-4 text-sm')}`}
+              className={`${getButtonClasses('primary', 'flex w-full items-center justify-center gap-2 py-4 text-sm disabled:bg-[#b9afa3] disabled:text-[#f8f3ec] disabled:shadow-none')}`}
             >
               <Wallet size={16} />
               Complete Order
               <ArrowRight size={16} />
             </button>
+            {!canSubmit && <p className="mt-3 text-center text-xs leading-6 text-[#8b7a68]">{checkoutHint}</p>}
           </div>
         </div>
       )}

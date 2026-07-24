@@ -300,7 +300,7 @@ const styleSampleLibrary: Record<PortraitStyleId, { heading: string; description
 };
 
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-const MIN_GENERATION_DISPLAY_MS = 5000;
+const MIN_GENERATION_DISPLAY_MS = 1800;
 const GENERATED_PREVIEW_SCALE = 1.14;
 const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() ?? '';
 const getViewportBoundArtworkStyle = (widthPercent: number, maxWidth: number): React.CSSProperties => ({
@@ -364,6 +364,22 @@ function getGenerationPhase(progress: number) {
   if (progress < 0.34) return 'Sketching silhouette and expression';
   if (progress < 0.68) return 'Layering painterly light and brush texture';
   return 'Finishing emotional details and varnish glow';
+}
+
+function getGenerationProgress(elapsedMs: number) {
+  if (elapsedMs <= 1200) {
+    return 0.12 + (elapsedMs / 1200) * 0.38;
+  }
+
+  if (elapsedMs <= 3200) {
+    return 0.5 + ((elapsedMs - 1200) / 2000) * 0.28;
+  }
+
+  if (elapsedMs <= 5200) {
+    return 0.78 + ((elapsedMs - 3200) / 2000) * 0.12;
+  }
+
+  return Math.min(0.9 + ((elapsedMs - 5200) / 6000) * 0.08, 0.98);
 }
 
 function getMockConceptImage(conceptId: string) {
@@ -489,15 +505,20 @@ export default function Create({
     }
 
     setIsGenerating(true);
-    setGenerationProgress(0);
+    setGenerationProgress(0.12);
     setGenerationError(null);
 
     try {
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve());
+        });
+      });
+
       const startedAt = Date.now();
       generationIntervalRef.current = setInterval(() => {
         const elapsed = Date.now() - startedAt;
-        const progress = Math.min(0.08 + elapsed / MIN_GENERATION_DISPLAY_MS, 0.94);
-        setGenerationProgress(progress);
+        setGenerationProgress(getGenerationProgress(elapsed));
       }, 120);
 
       const generationRequest = shouldUseLocalMockGeneration
