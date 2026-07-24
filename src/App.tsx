@@ -373,7 +373,7 @@ function AppContent() {
             />
           )}
       </main>
-      {route === 'home' && (
+      {!isStudioRoute && (
         <div className="md:hidden">
           <Footer onNavigate={navigate} />
         </div>

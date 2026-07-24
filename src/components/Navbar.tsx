@@ -47,16 +47,16 @@ export default function Navbar({
   return (
     <>
       <nav className="fixed top-0 z-40 w-full border-b border-[#D8CDBB] bg-[#F6F0E7]/92 backdrop-blur-md transition-all duration-300">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6 lg:px-10">
-          <div className="flex min-w-0 items-center">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+          <div className="flex min-w-0 flex-1 items-center">
             <button
               type="button"
               aria-label="Go to ViewBrush home"
               onClick={() => onNavigate('home')}
-              className="inline-flex items-center rounded-[2px] transition-opacity hover:opacity-95"
+              className="inline-flex min-w-0 items-center rounded-[2px] transition-opacity hover:opacity-95"
             >
               <span className="sr-only">ViewBrush</span>
-              <BrandLogo variant="nav" decorative />
+              <BrandLogo variant="nav" decorative className="h-[24px] sm:h-[28px]" />
             </button>
           </div>
 
@@ -80,7 +80,7 @@ export default function Navbar({
             ))}
           </ul>
 
-          <div className="flex items-center justify-end gap-3 md:gap-4 lg:gap-5">
+          <div className="flex flex-shrink-0 items-center justify-end gap-2 sm:gap-3 md:gap-4 lg:gap-5">
             <button
               type="button"
               aria-label="Account"
@@ -108,7 +108,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => onNavigate('create')}
-              className={`${getButtonClasses('primary', 'px-3.5 py-2 text-[12px] font-semibold whitespace-nowrap sm:px-5 sm:text-sm')} max-w-[9.75rem]`}
+              className="button-lift inline-flex !h-10 items-center justify-center whitespace-nowrap rounded-[8px] bg-[#31271F] !px-3.5 !py-0 !text-[13px] leading-none font-semibold tracking-[-0.01em] text-[#FBF8F3] transition-[background-color,transform] duration-200 hover:bg-[#241C16] sm:!h-auto sm:!px-5 sm:!py-3 sm:!text-sm"
             >
               {ctaLabel}
             </button>
