@@ -15,7 +15,7 @@ import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
 import Materials from './pages/Materials';
 import Cart from './pages/Cart';
-import Account, { type AccountOrderSnapshot } from './pages/Account';
+import Account, { type AccountOrderSnapshot, type OrderStage } from './pages/Account';
 import { defaultMockCustomer, mockAccountStorageKey, type MockCustomer } from './data/mockAccount';
 import imgCreatePlaceholderOptionB from './assets/images/create_placeholder_option_b_20260628.png';
 
@@ -24,6 +24,7 @@ type AccountEntryView = 'account' | 'orders';
 
 const cartStorageKey = 'viewbrush-saved-artwork';
 const accountOrderStorageKey = 'viewbrush-latest-order';
+const accountOrdersStorageKey = 'viewbrush-orders';
 const mockAccountSignedOutStorageKey = 'viewbrush-mock-account-signed-out';
 const maxStoredImageLength = 120_000;
 
@@ -92,18 +93,47 @@ function getSavedCartSelection(): PaymentDetailsPayload | null {
   }
 }
 
-function getSavedLatestOrder(): AccountOrderSnapshot | null {
-  if (typeof window === 'undefined') return null;
+function normalizeAccountOrderSnapshot(raw: unknown): AccountOrderSnapshot | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const parsed = raw as { selection?: unknown; order?: CheckoutSubmission; createdAt?: unknown; orderStage?: unknown };
+  const selection = normalizePaymentDetailsPayload(parsed.selection);
+  if (!selection || !parsed.order) return null;
+  const orderStage =
+    parsed.orderStage === 'review' ||
+    parsed.orderStage === 'revision' ||
+    parsed.orderStage === 'framing' ||
+    parsed.orderStage === 'shipping' ||
+    parsed.orderStage === 'complete'
+      ? parsed.orderStage
+      : 'review';
+
+  return {
+    selection,
+    order: parsed.order,
+    createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
+    orderStage,
+  };
+}
+
+function getSavedAccountOrders(): AccountOrderSnapshot[] {
+  if (typeof window === 'undefined') return [];
 
   try {
+    const savedOrders = window.localStorage.getItem(accountOrdersStorageKey);
+    if (savedOrders) {
+      const parsed = JSON.parse(savedOrders);
+      if (Array.isArray(parsed)) return parsed.flatMap((item) => {
+        const order = normalizeAccountOrderSnapshot(item);
+        return order ? [order] : [];
+      });
+    }
+
     const savedOrder = window.localStorage.getItem(accountOrderStorageKey);
-    if (!savedOrder) return null;
-    const parsed = JSON.parse(savedOrder) as { selection?: unknown; order?: CheckoutSubmission } | null;
-    const selection = normalizePaymentDetailsPayload(parsed?.selection);
-    if (!selection || !parsed?.order) return null;
-    return { selection, order: parsed.order };
+    const legacyOrder = savedOrder ? normalizeAccountOrderSnapshot(JSON.parse(savedOrder)) : null;
+    return legacyOrder ? [legacyOrder] : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -148,6 +178,13 @@ function getStorageSafeSelection(selection: PaymentDetailsPayload): PaymentDetai
   };
 }
 
+function getStorageSafeOrderSnapshot(snapshot: AccountOrderSnapshot): AccountOrderSnapshot {
+  return {
+    ...snapshot,
+    selection: getStorageSafeSelection(snapshot.selection),
+  };
+}
+
 function setLocalStorageItem(key: string, value: string) {
   try {
     window.localStorage.setItem(key, value);
@@ -177,10 +214,11 @@ function createMockCustomerFromEmail(email: string): MockCustomer {
 function AppContent() {
   const [route, setRoute] = useState<AppRoute>('create');
   const [isRouteReady, setIsRouteReady] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection() ?? getSavedLatestOrder()?.selection ?? null);
+  const [accountOrders, setAccountOrders] = useState<AccountOrderSnapshot[]>(() => getSavedAccountOrders());
+  const latestOrder = accountOrders[0] ?? null;
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection() ?? getSavedAccountOrders()[0]?.selection ?? null);
   const [cartSelection, setCartSelection] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection());
-  const [latestOrder, setLatestOrder] = useState<AccountOrderSnapshot | null>(() => getSavedLatestOrder());
-  const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(() => getSavedLatestOrder()?.order ?? null);
+  const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(() => getSavedAccountOrders()[0]?.order ?? null);
   const [cartResetKey, setCartResetKey] = useState(0);
   const [mockCustomer, setMockCustomer] = useState<MockCustomer | null>(() => getSavedMockCustomer());
   const [hasSignedOut, setHasSignedOut] = useState(() => getSavedMockAccountSignedOut());
@@ -244,6 +282,10 @@ function AppContent() {
   const checkoutSelection = paymentDetails ?? cartSelection ?? latestOrder?.selection ?? null;
   const successSelection = paymentDetails ?? latestOrder?.selection ?? null;
   const successOrder = checkoutOrder ?? latestOrder?.order ?? null;
+  const hasAccountActionRequired = accountOrders.some(({ orderStage }) => {
+    const stage = orderStage ?? 'review';
+    return stage === 'review' || stage === 'shipping';
+  });
 
   const handleNavigate = (nextRoute: AppRoute) => {
     if (nextRoute === 'account') {
@@ -279,6 +321,23 @@ function AppContent() {
     window.localStorage.removeItem(cartStorageKey);
   };
 
+  const persistAccountOrders = (orders: AccountOrderSnapshot[]) => {
+    setLocalStorageItem(accountOrdersStorageKey, JSON.stringify(orders.map(getStorageSafeOrderSnapshot)));
+    if (orders[0]) {
+      setLocalStorageItem(accountOrderStorageKey, JSON.stringify(getStorageSafeOrderSnapshot(orders[0])));
+    }
+  };
+
+  const updateOrderStage = (orderIndex: number, orderStage: OrderStage) => {
+    setAccountOrders((currentOrders) => {
+      const nextOrders = currentOrders.map((accountOrder, index) =>
+        index === orderIndex ? { ...accountOrder, orderStage } : accountOrder
+      );
+      persistAccountOrders(nextOrders);
+      return nextOrders;
+    });
+  };
+
   const handleMockSignIn = (customer: MockCustomer) => {
     setAccountEntryView('account');
     setHasSignedOut(false);
@@ -309,7 +368,7 @@ function AppContent() {
         <Navbar
           currentRoute={route}
           hasCartItems={Boolean(cartSelection)}
-          hasAccountNotifications={Boolean(latestOrder) && !hasSignedOut}
+          hasAccountNotifications={hasAccountActionRequired && !hasSignedOut}
           onNavigate={handleNavigate}
         />
       )}
@@ -339,11 +398,12 @@ function AppContent() {
           <Account
             customer={mockCustomer}
             savedSelection={cartSelection}
-            latestOrder={latestOrder}
+            accountOrders={accountOrders}
             initialView={accountEntryView}
             onCreate={() => navigate('create')}
             onOpenCart={() => navigate('cart')}
             onSignOut={handleMockSignOut}
+            onUpdateOrderStage={updateOrderStage}
           />
         )}
         {route === 'account' && !mockCustomer && (
@@ -392,19 +452,19 @@ function AppContent() {
               selection={checkoutSelection}
               onBack={() => navigate('details')}
               onComplete={(submission) => {
-                const orderSnapshot = { selection: checkoutSelection, order: submission };
-                const storageOrderSnapshot = { selection: getStorageSafeSelection(orderSnapshot.selection), order: submission };
+                const orderSnapshot = { selection: checkoutSelection, order: submission, createdAt: new Date().toISOString(), orderStage: 'review' as const };
+                const nextAccountOrders = [orderSnapshot, ...accountOrders];
                 const nextCustomer = mockCustomer ?? createMockCustomerFromEmail(submission.email);
                 setPaymentDetails(orderSnapshot.selection);
                 setCheckoutOrder(submission);
-                setLatestOrder(orderSnapshot);
+                setAccountOrders(nextAccountOrders);
                 setHasSignedOut(false);
                 setMockCustomer(nextCustomer);
                 setAccountEntryView('orders');
                 setCartSelection(null);
                 window.localStorage.removeItem(mockAccountSignedOutStorageKey);
                 setLocalStorageItem(mockAccountStorageKey, JSON.stringify(nextCustomer));
-                setLocalStorageItem(accountOrderStorageKey, JSON.stringify(storageOrderSnapshot));
+                persistAccountOrders(nextAccountOrders);
                 window.localStorage.removeItem(cartStorageKey);
                 navigate('success');
               }}
@@ -425,6 +485,7 @@ function AppContent() {
             <OrderSuccess
               selection={successSelection}
               order={successOrder}
+              createdAt={latestOrder?.createdAt}
               onReturnHome={() => {
                 setCheckoutOrder(null);
                 setPaymentDetails(null);

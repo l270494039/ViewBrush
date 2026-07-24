@@ -21,16 +21,18 @@ import generationMotionVideo from '../assets/videos/generation-motion-graphics.m
 import type { CheckoutSubmission } from './Checkout';
 import type { PaymentDetailsPayload } from './PaymentDetails';
 
-export type AccountOrderSnapshot = {
-  selection: PaymentDetailsPayload;
-  order: CheckoutSubmission;
-};
-
 type AccountView = 'account' | 'orders' | 'gift-card' | 'payment-methods' | 'support';
 type AccountPanel = 'overview' | 'profile-edit' | 'subscription-edit' | 'address-book' | 'billing-address' | 'shipping-address';
 type AddressKind = 'billing' | 'shipping';
 type ReviewPreviewMode = 'artwork' | 'detail' | 'video';
-type OrderStage = 'review' | 'revision' | 'framing' | 'shipping' | 'complete';
+export type OrderStage = 'review' | 'revision' | 'framing' | 'shipping' | 'complete';
+
+export type AccountOrderSnapshot = {
+  selection: PaymentDetailsPayload;
+  order: CheckoutSubmission;
+  createdAt?: string;
+  orderStage?: OrderStage;
+};
 
 type GiftMessage = {
   title: string;
@@ -67,11 +69,12 @@ type SupportTicket = {
 const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() || 'support@viewbrush.com';
 const supportPhone = import.meta.env.VITE_SUPPORT_PHONE?.trim() || '+1 (888) 406-3555';
 
-function buildOrderNumber(snapshot: AccountOrderSnapshot | null) {
+function buildOrderNumber(snapshot: AccountOrderSnapshot | null, index = 0) {
   if (!snapshot) return '';
 
   const { selection, order } = snapshot;
-  return `VB-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}`;
+  const timestamp = snapshot.createdAt ? new Date(snapshot.createdAt).getTime().toString().slice(-6) : String(index + 1).padStart(3, '0');
+  return `VB-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}${timestamp}`;
 }
 
 function getArtworkImage(selection: PaymentDetailsPayload) {
@@ -91,19 +94,21 @@ function getOrderStatusBadgeClasses(orderStage: OrderStage) {
 export default function Account({
   customer,
   savedSelection,
-  latestOrder,
+  accountOrders,
   initialView = 'account',
   onCreate,
   onOpenCart,
   onSignOut,
+  onUpdateOrderStage,
 }: {
   customer: MockCustomer;
   savedSelection: PaymentDetailsPayload | null;
-  latestOrder: AccountOrderSnapshot | null;
+  accountOrders: AccountOrderSnapshot[];
   initialView?: AccountView;
   onCreate: () => void;
   onOpenCart: () => void;
   onSignOut: () => void;
+  onUpdateOrderStage: (orderIndex: number, stage: OrderStage) => void;
 }) {
   const [activeView, setActiveView] = useState<AccountView>(initialView);
   const [accountPanel, setAccountPanel] = useState<AccountPanel>('overview');
@@ -113,17 +118,8 @@ export default function Account({
   const [giftCardBalance, setGiftCardBalance] = useState(0);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
-  const orderNumber = useMemo(() => buildOrderNumber(latestOrder), [latestOrder]);
-  const latestOrderPresentation = useMemo(
-    () =>
-      latestOrder
-        ? getPresentationSummary(
-            latestOrder.selection.finishLabel,
-            latestOrder.selection.finishType === 'framed' ? latestOrder.selection.frameLabel : null
-          )
-        : '',
-    [latestOrder]
-  );
+  const latestOrder = accountOrders[0] ?? null;
+  const latestOrderNumber = useMemo(() => buildOrderNumber(latestOrder), [latestOrder]);
   const openView = (view: AccountView) => {
     setActiveView(view);
     if (view !== 'account') setAccountPanel('overview');
@@ -138,10 +134,10 @@ export default function Account({
   return (
     <div className="min-h-screen bg-[#FBF8F3] pt-16 text-[#2D241B]">
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-[120px] pt-8 sm:px-6 lg:px-10 lg:pt-12">
-          <AccountHero
+        <AccountHero
           customer={profile}
           savedSelection={savedSelection}
-          latestOrder={latestOrder}
+          orderCount={accountOrders.length}
           onCreate={onCreate}
           onOpenCart={onOpenCart}
           onOpenOrders={openOrders}
@@ -192,11 +188,11 @@ export default function Account({
                 />
               ))}
             {activeView === 'orders' && (
-              <Orders latestOrder={latestOrder} orderNumber={orderNumber} presentationSummary={latestOrderPresentation} onCreate={onCreate} />
+              <Orders accountOrders={accountOrders} onCreate={onCreate} onUpdateOrderStage={onUpdateOrderStage} />
             )}
             {activeView === 'gift-card' && <GiftCardPanel balance={giftCardBalance} onApplyCode={(amount) => setGiftCardBalance((current) => current + amount)} />}
             {activeView === 'payment-methods' && <PaymentMethodsPanel paymentMethods={paymentMethods} onAddPaymentMethod={(method) => setPaymentMethods((current) => [...current, method])} onRemovePaymentMethod={(id) => setPaymentMethods((current) => current.filter((method) => method.id !== id))} />}
-            {activeView === 'support' && <SupportPanel latestOrder={latestOrder} orderNumber={orderNumber} tickets={supportTickets} onCreate={onCreate} onSubmitTicket={(ticket) => setSupportTickets((current) => [ticket, ...current])} />}
+            {activeView === 'support' && <SupportPanel latestOrder={latestOrder} orderNumber={latestOrderNumber} tickets={supportTickets} onCreate={onCreate} onSubmitTicket={(ticket) => setSupportTickets((current) => [ticket, ...current])} />}
           </section>
         </div>
       </main>
@@ -207,7 +203,7 @@ export default function Account({
 function AccountHero({
   customer,
   savedSelection,
-  latestOrder,
+  orderCount,
   onCreate,
   onOpenCart,
   onOpenOrders,
@@ -215,17 +211,17 @@ function AccountHero({
 }: {
   customer: MockCustomer;
   savedSelection: PaymentDetailsPayload | null;
-  latestOrder: AccountOrderSnapshot | null;
+  orderCount: number;
   onCreate: () => void;
   onOpenCart: () => void;
   onOpenOrders: () => void;
   onSignOut: () => void;
 }) {
-  const hasOrder = Boolean(latestOrder);
+  const hasOrder = orderCount > 0;
   const stats = [
     { label: 'Saved Artwork', value: savedSelection ? '1' : '0', onClick: onOpenCart },
-    { label: 'Orders', value: latestOrder ? '1' : '0', onClick: onOpenOrders },
-    { label: 'Member Since', value: customer.memberSince, onClick: undefined },
+    { label: 'Orders', value: String(orderCount), onClick: onOpenOrders },
+    { label: 'Completed Orders', value: String(orderCount), onClick: onOpenOrders },
   ];
 
   return (
@@ -838,26 +834,15 @@ function AddressForm({
 }
 
 function Orders({
-  latestOrder,
-  orderNumber,
-  presentationSummary,
+  accountOrders,
   onCreate,
+  onUpdateOrderStage,
 }: {
-  latestOrder: AccountOrderSnapshot | null;
-  orderNumber: string;
-  presentationSummary: string;
+  accountOrders: AccountOrderSnapshot[];
   onCreate: () => void;
+  onUpdateOrderStage: (orderIndex: number, stage: OrderStage) => void;
 }) {
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [isGiftOpen, setIsGiftOpen] = useState(false);
-  const [giftMessage, setGiftMessage] = useState<GiftMessage | null>(null);
-  const [isGiftOrder, setIsGiftOrder] = useState(false);
-  const [isFramingOpen, setIsFramingOpen] = useState(false);
-  const [isShippingOpen, setIsShippingOpen] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState<AddressRecord | null>(null);
-  const [orderStage, setOrderStage] = useState<OrderStage>('review');
-
-  if (!latestOrder) {
+  if (!accountOrders.length) {
     return (
       <section className="rounded-[8px] border border-[#DCCFBC] bg-white/82 p-8 shadow-[0_18px_38px_rgba(43,31,21,0.05)]">
         <div className="max-w-[560px]">
@@ -872,19 +857,65 @@ function Orders({
     );
   }
 
-  const { selection, order } = latestOrder;
+  return (
+    <section className="space-y-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.1em] text-[#8F816C]">ViewBrush Orders</p>
+        <h1 className="mt-2 text-[26px] font-semibold leading-tight text-[#241C16] md:text-[30px]">My Orders</h1>
+        <p className="mt-3 text-sm leading-7 text-[#5F564B]">
+          {accountOrders.length} {accountOrders.length === 1 ? 'order is' : 'orders are'} saved to this workspace. The newest order appears first.
+        </p>
+      </div>
+
+      <div className="space-y-5">
+        {accountOrders.map((accountOrder, index) => (
+          <div key={accountOrder.createdAt ?? buildOrderNumber(accountOrder, index)}>
+            <OrderCard
+              accountOrder={accountOrder}
+              orderIndex={index}
+              orderNumber={buildOrderNumber(accountOrder, index)}
+              presentationSummary={getPresentationSummary(
+                accountOrder.selection.finishLabel,
+                accountOrder.selection.finishType === 'framed' ? accountOrder.selection.frameLabel : null
+              )}
+              onUpdateOrderStage={onUpdateOrderStage}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OrderCard({
+  accountOrder,
+  orderIndex,
+  orderNumber,
+  presentationSummary,
+  onUpdateOrderStage,
+}: {
+  accountOrder: AccountOrderSnapshot;
+  orderIndex: number;
+  orderNumber: string;
+  presentationSummary: string;
+  onUpdateOrderStage: (orderIndex: number, stage: OrderStage) => void;
+}) {
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isGiftOpen, setIsGiftOpen] = useState(false);
+  const [giftMessage, setGiftMessage] = useState<GiftMessage | null>(null);
+  const [isGiftOrder, setIsGiftOrder] = useState(false);
+  const [isFramingOpen, setIsFramingOpen] = useState(false);
+  const [isShippingOpen, setIsShippingOpen] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState<AddressRecord | null>(null);
+  const orderStage = accountOrder.orderStage ?? 'review';
+  const { selection, order } = accountOrder;
   const artworkImage = getArtworkImage(selection);
   const currentStatus = getOrderStageCopy(orderStage).current;
   const nextStatus = getOrderStageCopy(orderStage).next;
   const paymentStatus = 'Paid in full';
 
   return (
-    <section className="space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-[#8F816C]">ViewBrush Orders</p>
-        <h1 className="mt-2 text-[26px] font-semibold leading-tight text-[#241C16] md:text-[30px]">My Orders</h1>
-      </div>
-
+    <>
       <article className="grid gap-5 rounded-[8px] border border-[#DCCFBC] bg-white/86 p-5 shadow-[0_18px_38px_rgba(43,31,21,0.05)] xl:grid-cols-[148px_minmax(0,1fr)_260px] xl:p-6">
         <div className="overflow-hidden rounded-[8px] border border-[#DCCFBC] bg-[#F3EBDE]">
           {artworkImage ? (
@@ -972,12 +1003,12 @@ function Orders({
           presentationSummary={presentationSummary}
           onClose={() => setIsReviewOpen(false)}
           onApprove={() => {
-            setOrderStage('framing');
+            onUpdateOrderStage(orderIndex, 'framing');
             setIsFramingOpen(true);
             setIsReviewOpen(false);
           }}
           onRequestModification={() => {
-            setOrderStage('revision');
+            onUpdateOrderStage(orderIndex, 'revision');
             setIsReviewOpen(false);
           }}
         />
@@ -990,7 +1021,7 @@ function Orders({
           orderStage={orderStage}
           onClose={() => setIsFramingOpen(false)}
           onConfirm={() => {
-            setOrderStage(shippingAddress ? 'complete' : 'shipping');
+            onUpdateOrderStage(orderIndex, shippingAddress ? 'complete' : 'shipping');
             setIsFramingOpen(false);
           }}
         />
@@ -1017,12 +1048,12 @@ function Orders({
           onClose={() => setIsShippingOpen(false)}
           onSave={(address) => {
             setShippingAddress(address);
-            if (orderStage === 'shipping') setOrderStage('complete');
+            if (orderStage === 'shipping') onUpdateOrderStage(orderIndex, 'complete');
             setIsShippingOpen(false);
           }}
         />
       )}
-    </section>
+    </>
   );
 }
 

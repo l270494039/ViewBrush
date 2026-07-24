@@ -429,7 +429,9 @@ export default function Create({
   const [selectedConceptId, setSelectedConceptId] = useState(concepts[0].id);
   const [previewConceptId, setPreviewConceptId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState(roomScenes[0].id);
-  const [selectedFinishType, setSelectedFinishType] = useState<FinishType>('gallery-wrap');
+  const [selectedFinishType, setSelectedFinishType] = useState<FinishType>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'framed' : 'gallery-wrap'
+  );
   const [selectedFrameId, setSelectedFrameId] = useState(commerceFrameOptions[0].id);
   const [selectedSize, setSelectedSize] = useState(commerceSizeOptions[0].id);
   const [note, setNote] = useState('');
@@ -968,6 +970,7 @@ function MobileCommerceCreate({
   const sizeSectionRef = useRef<HTMLElement | null>(null);
   const finishSectionRef = useRef<HTMLElement | null>(null);
   const mobileFrameStylePanelRef = useRef<HTMLDivElement | null>(null);
+  const previousMobileFinishTypeRef = useRef<FinishType>(selectedFinishType);
   const [activeSelectionNav, setActiveSelectionNav] = useState<'style' | 'size' | 'finish'>('style');
 
   useEffect(() => {
@@ -1013,18 +1016,9 @@ function MobileCommerceCreate({
     };
   }, []);
 
-  useEffect(() => {
-    if (selectedFinishType !== 'framed') return;
-
-    window.requestAnimationFrame(() => {
-      mobileFrameStylePanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    });
-  }, [selectedFinishType]);
-
   const scrollToSelectionSection = (section: 'style' | 'size' | 'finish') => {
+    setActiveSelectionNav(section);
+
     const sectionMap = {
       style: styleSectionRef.current,
       size: sizeSectionRef.current,
@@ -1284,7 +1278,10 @@ function MobileCommerceCreate({
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.35 }}
                             type="button"
-                            onClick={() => setSelectedConceptId(style.id)}
+                            onClick={() => {
+                              setSelectedConceptId(style.id);
+                              setActiveSelectionNav('style');
+                            }}
                             className={`group w-full overflow-hidden rounded-[8px] border text-left transition ${
                               isActive ? 'border-[#1c1b19] bg-[#fcfaf6] shadow-[0_14px_24px_rgba(40,29,20,0.08)]' : 'border-[#e8dece] bg-[#faf7f2]'
                             }`}
@@ -1348,7 +1345,10 @@ function MobileCommerceCreate({
                 return (
                   <button
                     key={option.id}
-                    onClick={() => setSelectedSize(option.id)}
+                    onClick={() => {
+                      setSelectedSize(option.id);
+                      setActiveSelectionNav('size');
+                    }}
                     className={`rounded-[8px] border px-3 py-3 text-left transition ${
                       option.id === 'custom-size' ? 'col-span-2' : ''
                     } ${
@@ -1371,16 +1371,32 @@ function MobileCommerceCreate({
               <h3 className="mt-1 text-lg font-semibold text-[#1A1A1A]">Choose how the artwork arrives</h3>
             </div>
             <div className="space-y-4 px-4 py-4">
-              <FinishOptionGrid selectedFinishType={selectedFinishType} setSelectedFinishType={setSelectedFinishType} />
-              {selectedFinishType === 'framed' && (
-                <div ref={mobileFrameStylePanelRef} className="rounded-[8px] border border-[#E7DED1] bg-[#FCFAF6] p-3">
-                  <div className="mb-3">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E7C66]">Frame Style</div>
-                    <div className="mt-1 text-[13px] leading-5 text-[#62584D]">Choose the outer frame finish after selecting framed presentation.</div>
-                  </div>
-                  <FrameOptionRail selectedFrameId={selectedFrameId} setSelectedFrameId={setSelectedFrameId} variant="compact-grid" />
+              <FinishOptionGrid
+                selectedFinishType={selectedFinishType}
+                setSelectedFinishType={(id) => {
+                  setSelectedFinishType(id);
+                  setActiveSelectionNav('finish');
+                }}
+              />
+              <div
+                ref={mobileFrameStylePanelRef}
+                className={`rounded-[8px] border border-[#E7DED1] bg-[#FCFAF6] p-3 transition-opacity ${
+                  selectedFinishType === 'framed' ? 'opacity-100' : 'opacity-72'
+                }`}
+              >
+                <div className="mb-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E7C66]">Frame Style</div>
+                  <div className="mt-1 text-[13px] leading-5 text-[#62584D]">Choose the outer frame finish for framed presentation.</div>
                 </div>
-              )}
+                <FrameOptionRail
+                  selectedFrameId={selectedFrameId}
+                  setSelectedFrameId={(id) => {
+                    setSelectedFrameId(id);
+                    setActiveSelectionNav('finish');
+                  }}
+                  variant="compact-grid"
+                />
+              </div>
             </div>
           </section>
 
@@ -1511,9 +1527,14 @@ function DesktopCommerceCreate({
 }: CommerceCreateLayoutProps) {
   const leftPanelScrollRef = useRef<HTMLDivElement | null>(null);
   const frameStylePanelRef = useRef<HTMLDivElement | null>(null);
+  const previousDesktopFinishTypeRef = useRef<FinishType>(selectedFinishType);
 
   useEffect(() => {
-    if (selectedFinishType !== 'framed') return;
+    const previousFinishType = previousDesktopFinishTypeRef.current;
+    previousDesktopFinishTypeRef.current = selectedFinishType;
+
+    if (previousFinishType === selectedFinishType) return;
+    if (previousFinishType === 'framed' || selectedFinishType !== 'framed') return;
 
     window.requestAnimationFrame(() => {
       frameStylePanelRef.current?.scrollIntoView({

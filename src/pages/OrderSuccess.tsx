@@ -8,17 +8,20 @@ import type { PaymentDetailsPayload } from './PaymentDetails';
 export default function OrderSuccess({
   selection,
   order,
+  createdAt,
   onReturnHome,
   onCreateAnother,
   onViewAccount,
 }: {
   selection: PaymentDetailsPayload;
   order: CheckoutSubmission;
+  createdAt?: string;
   onReturnHome: () => void;
   onCreateAnother: () => void;
   onViewAccount: () => void;
 }) {
-  const orderNumber = `VB-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}`;
+  const timestamp = createdAt ? new Date(createdAt).getTime().toString().slice(-6) : '001';
+  const orderNumber = `VB-${selection.conceptTitle.slice(0, 2).toUpperCase()}${order.total}${selection.size.replace(/\D/g, '').slice(0, 4)}${timestamp}`;
   const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
 
   return (
