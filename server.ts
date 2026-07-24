@@ -221,6 +221,12 @@ app.post('/api/generate-portrait', async (req, res) => {
   }
 });
 
+app.get('/api/runtime-config', (_req, res) => {
+  res.json({
+    forceMockGeneration,
+  });
+});
+
 app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: 'API route not found.' });
 });

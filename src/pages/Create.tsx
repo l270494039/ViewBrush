@@ -68,6 +68,11 @@ type StudioControls = {
 type GeneratePortraitResponse = {
   imageDataUrl?: string;
   error?: string;
+  isMock?: boolean;
+};
+
+type RuntimeConfigResponse = {
+  forceMockGeneration?: boolean;
 };
 
 type CanvasOrientation = 'portrait' | 'landscape' | 'square';
@@ -442,12 +447,31 @@ export default function Create({
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [isRuntimeMockGenerationEnabled, setIsRuntimeMockGenerationEnabled] = useState(false);
 
   useEffect(() => {
     return () => {
       if (generationIntervalRef.current) {
         clearInterval(generationIntervalRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch('/api/runtime-config')
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as RuntimeConfigResponse | null;
+        if (!response.ok || !payload || !isActive) return;
+        setIsRuntimeMockGenerationEnabled(payload.forceMockGeneration === true);
+      })
+      .catch(() => {
+        // Ignore runtime-config fetch errors and fall back to server responses.
+      });
+
+    return () => {
+      isActive = false;
     };
   }, []);
 
@@ -493,7 +517,8 @@ export default function Create({
 
   const generationLabel = Object.keys(generatedImages).length > 0 ? 'Regenerate Preview' : 'Generate Preview';
   const generationPhase = getGenerationPhase(generationProgress);
-  const shouldUseLocalMockGeneration = import.meta.env.DEV && window.__VIEWBRUSH_DEV_SERVER__?.hasApiKey === false;
+  const shouldUseLocalMockGeneration =
+    (import.meta.env.DEV && window.__VIEWBRUSH_DEV_SERVER__?.hasApiKey === false) || isRuntimeMockGenerationEnabled;
 
   async function handleGenerate() {
     if (!hasUpload) {
@@ -526,6 +551,7 @@ export default function Create({
       const generationRequest = shouldUseLocalMockGeneration
         ? Promise.resolve<GeneratePortraitResponse>({
             imageDataUrl: getMockConceptImage(selectedConceptId),
+            isMock: true,
           })
         : fetch('/api/generate-portrait', {
             method: 'POST',
@@ -965,6 +991,7 @@ function MobileCommerceCreate({
     { label: 'Details' },
   ];
   const currentStepIndex = studio.selectedConceptReady ? 2 : studio.hasUpload ? 1 : 0;
+  const previewSectionRef = useRef<HTMLElement | null>(null);
   const selectedBarRef = useRef<HTMLDivElement | null>(null);
   const styleSectionRef = useRef<HTMLElement | null>(null);
   const sizeSectionRef = useRef<HTMLElement | null>(null);
@@ -1034,6 +1061,21 @@ function MobileCommerceCreate({
       top: Math.max(targetTop, 0),
       behavior: 'smooth',
     });
+  };
+
+  const handleMobileGenerate = () => {
+    setView('canvas');
+
+    const previewTop = previewSectionRef.current
+      ? window.scrollY + previewSectionRef.current.getBoundingClientRect().top - 8
+      : 0;
+
+    window.scrollTo({
+      top: Math.max(previewTop, 0),
+      behavior: 'smooth',
+    });
+
+    void studio.onGenerate();
   };
 
   return (
@@ -1109,7 +1151,7 @@ function MobileCommerceCreate({
       </div>
 
       <div className="mx-auto w-full max-w-[1600px] px-4 pb-8 pt-4">
-        <section className="-mx-4 border-b border-[#E6DED2] px-4 pb-4 pt-2">
+        <section ref={previewSectionRef} className="-mx-4 border-b border-[#E6DED2] px-4 pb-4 pt-2">
           <div
             className="relative overflow-hidden rounded-[12px] border border-[#DDD1BF] px-1.5 py-2 shadow-[0_18px_40px_rgba(53,39,24,0.10)]"
             style={{
@@ -1471,7 +1513,7 @@ function MobileCommerceCreate({
             </>
           ) : studio.hasUpload ? (
             <button
-              onClick={studio.onGenerate}
+              onClick={handleMobileGenerate}
               disabled={studio.isGenerating}
               className={`flex w-full items-center justify-center gap-3 rounded-[8px] bg-[#1a1a1a] px-4 py-4 text-sm font-semibold text-white transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${
                 !studio.isGenerating ? 'gold-sheen-button' : ''
