@@ -17,7 +17,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const host = process.env.HOST ?? (isProduction ? '0.0.0.0' : '127.0.0.1');
 const port = Number(process.env.PORT ?? (isProduction ? 10000 : 3000));
 const disableHmr = process.env.DISABLE_HMR === 'true';
-const forceMockGeneration = process.env.VIEWBRUSH_FORCE_MOCK_GENERATION === 'true';
+const forceMockGeneration =
+  process.env.PIKTURA_FORCE_MOCK_GENERATION === 'true' ||
+  process.env.VIEWBRUSH_FORCE_MOCK_GENERATION === 'true';
 const startedAt = new Date().toISOString();
 const workspaceName = 'ViewBrush';
 const devServerMeta = {
