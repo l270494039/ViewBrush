@@ -81,8 +81,9 @@ export default function OrderSuccess({
               <div className="mt-5 space-y-3 text-sm">
                 <SummaryRow label="Order number" value={orderNumber} />
                 <SummaryRow label="Payment method" value={formatPaymentMethod(order.paymentMethod)} />
+                <SummaryRow label="Payment plan" value={formatPaymentPlan(order.paymentPlan ?? selection.paymentPlan)} />
                 <SummaryRow label="Delivery" value={order.deliveryOption === 'express' ? 'Express' : 'Standard'} />
-                <SummaryRow label="Total paid" value={`$${order.total}`} />
+                <SummaryRow label={(order.paymentPlan ?? selection.paymentPlan) === 'installments' ? 'Paid today' : 'Total paid'} value={formatMoney(order.amountDueToday ?? order.total)} />
               </div>
 
               <div className="mt-6 flex flex-col gap-3">
@@ -149,4 +150,16 @@ function formatPaymentMethod(method: CheckoutSubmission['paymentMethod']) {
   if (method === 'shop-pay') return 'Shop Pay';
   if (method === 'paypal') return 'PayPal';
   return 'Credit Card';
+}
+
+function formatPaymentPlan(plan: CheckoutSubmission['paymentPlan']) {
+  return plan === 'installments' ? '4 interest-free payments' : 'Paid in full';
+}
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
 }

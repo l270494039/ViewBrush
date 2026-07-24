@@ -251,6 +251,7 @@ function AppContent() {
     if (
       route === 'faq' ||
       route === 'home' ||
+      route === 'create' ||
       route === 'about' ||
       route === 'how' ||
       route === 'materials' ||
@@ -435,7 +436,14 @@ function AppContent() {
         )}
         {route === 'details' &&
           (detailsSelection ? (
-            <PaymentDetails selection={detailsSelection} onBack={() => navigate('create')} onContinueCheckout={() => navigate('checkout')} />
+            <PaymentDetails
+              selection={detailsSelection}
+              onBack={() => navigate('create')}
+              onContinueCheckout={(details) => {
+                setPaymentDetails(details);
+                navigate('checkout');
+              }}
+            />
           ) : (
             <Create
               onNavigate={navigate}

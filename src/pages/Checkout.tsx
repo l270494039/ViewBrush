@@ -11,18 +11,22 @@ import {
 } from 'lucide-react';
 import { getPresentationSummary } from '../data/presentationOptions';
 import { getBackButtonClasses, getBadgeClasses, getButtonClasses, getHeadingFont, getInputClasses } from '../utils/theme';
-import type { PaymentDetailsPayload } from './PaymentDetails';
+import type { PaymentDetailsPayload, PaymentPlan } from './PaymentDetails';
 
 export type CheckoutSubmission = {
   email: string;
   country: string;
   paymentMethod: 'card' | 'paypal' | 'apple-pay' | 'shop-pay';
+  paymentPlan: PaymentPlan;
   deliveryOption: 'standard' | 'express';
   total: number;
+  amountDueToday: number;
 };
 
 const basePrice = 279;
 const expressSurcharge = 25;
+const installmentCount = 4;
+const installmentAmount = basePrice / installmentCount;
 
 const paymentMethods: Array<{ id: CheckoutSubmission['paymentMethod']; label: string }> = [
   { id: 'card', label: 'Credit Card' },
@@ -56,11 +60,14 @@ export default function Checkout({
   const [cvv, setCvv] = useState('');
   const [giftCard, setGiftCard] = useState('');
   const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
+  const paymentPlan = selection.paymentPlan ?? 'full';
+  const paymentPlanLabel = paymentPlan === 'installments' ? `${installmentCount} interest-free payments` : 'Pay in full';
 
   const total = useMemo(
     () => basePrice + (deliveryOption === 'express' ? expressSurcharge : 0),
     [deliveryOption]
   );
+  const amountDueToday = paymentPlan === 'installments' ? installmentAmount + (deliveryOption === 'express' ? expressSurcharge : 0) : total;
 
   useEffect(() => {
     const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
@@ -73,10 +80,6 @@ export default function Checkout({
 
   const cardComplete = cardNumber.trim().length >= 12 && expiry.trim().length >= 4 && cvv.trim().length >= 3;
   const canSubmit = email.trim() && country.trim() && (paymentMethod === 'card' ? cardComplete : true);
-  const checkoutHint =
-    paymentMethod === 'card'
-      ? 'Add your email and complete card details to enable checkout.'
-      : 'Add your email to enable checkout.';
 
   return (
     <div className="min-h-screen w-full bg-[#f7f2ea] text-[#2d241b]">
@@ -252,17 +255,19 @@ export default function Checkout({
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8f816c]">Review & Pay</p>
               <div className="mt-5 flex items-end justify-between border-b border-[#ece3d7] pb-5">
                 <div>
-                  <p className="text-sm text-[#6e6254]">Total Due</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#9b8c78]">Final price — no surprises</p>
+                  <p className="text-sm text-[#6e6254]">Due Today</p>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#9b8c78]">{paymentPlan === 'installments' ? 'Installment plan' : 'Final price — no surprises'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-4xl font-semibold">${total}</p>
+                  <p className="text-4xl font-semibold">{formatMoney(amountDueToday)}</p>
                 </div>
               </div>
 
               <div className="mt-5 space-y-3 text-sm">
                 <CheckoutRow label="Portrait package" value="$279" />
                 <CheckoutRow label="Shipping" value={deliveryOption === 'express' ? '$25' : 'Free'} />
+                <CheckoutRow label="Payment plan" value={paymentPlanLabel} />
+                {paymentPlan === 'installments' && <CheckoutRow label="Order total" value={formatMoney(total)} />}
               </div>
 
               <div className="mt-5 border-t border-[#ece3d7] pt-5">
@@ -293,8 +298,10 @@ export default function Checkout({
                         email,
                         country,
                         paymentMethod,
+                        paymentPlan,
                         deliveryOption,
                         total,
+                        amountDueToday,
                       })
                     }
                     disabled={!canSubmit}
@@ -304,7 +311,6 @@ export default function Checkout({
                     Complete Order
                     <ArrowRight size={16} />
                   </button>
-                  {!canSubmit && <p className="mt-3 text-xs leading-6 text-[#8b7a68]">{checkoutHint}</p>}
                 </>
               )}
             </div>
@@ -321,8 +327,10 @@ export default function Checkout({
                   email,
                   country,
                   paymentMethod,
+                  paymentPlan,
                   deliveryOption,
                   total,
+                  amountDueToday,
                 })
               }
               disabled={!canSubmit}
@@ -332,7 +340,6 @@ export default function Checkout({
               Complete Order
               <ArrowRight size={16} />
             </button>
-            {!canSubmit && <p className="mt-3 text-center text-xs leading-6 text-[#8b7a68]">{checkoutHint}</p>}
           </div>
         </div>
       )}
@@ -347,4 +354,12 @@ function CheckoutRow({ label, value }: { label: string; value: string }) {
       <span className="font-medium">{value}</span>
     </div>
   );
+}
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
 }

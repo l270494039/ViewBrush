@@ -936,7 +936,8 @@ function OrderCard({
   const artworkImage = getArtworkImage(selection);
   const currentStatus = getOrderStageCopy(orderStage).current;
   const nextStatus = getOrderStageCopy(orderStage).next;
-  const paymentStatus = 'Paid in full';
+  const paymentPlan = order.paymentPlan ?? selection.paymentPlan;
+  const paymentStatus = paymentPlan === 'installments' ? 'Installment plan' : 'Paid in full';
 
   return (
     <>
@@ -1013,11 +1014,15 @@ function OrderCard({
             {giftMessage ? 'Edit Gift Message' : 'Add Gift Message'}
           </button>
           {giftMessage && <p className="text-xs font-semibold text-[#5F564B]">Gift message added for {giftMessage.recipient}.</p>}
-          <button type="button" onClick={() => setIsShippingOpen(true)} className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-[#31271F] underline underline-offset-4 transition hover:text-[#6E6254]">
-            <Truck size={16} />
-            View / Update Shipping
-          </button>
-          {shippingAddress && <p className="text-xs leading-5 text-[#5F564B]">Shipping to {shippingAddress.city}, {shippingAddress.region}.</p>}
+          {(orderStage === 'shipping' || orderStage === 'complete') && (
+            <>
+              <button type="button" onClick={() => setIsShippingOpen(true)} className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-[#31271F] underline underline-offset-4 transition hover:text-[#6E6254]">
+                <Truck size={16} />
+                View / Update Shipping
+              </button>
+              {shippingAddress && <p className="text-xs leading-5 text-[#5F564B]">Shipping to {shippingAddress.city}, {shippingAddress.region}.</p>}
+            </>
+          )}
         </aside>
       </article>
 
@@ -1028,7 +1033,6 @@ function OrderCard({
           onClose={() => setIsReviewOpen(false)}
           onApprove={() => {
             onUpdateOrderStage(orderIndex, 'framing');
-            setIsFramingOpen(true);
             setIsReviewOpen(false);
           }}
           onRequestModification={() => {

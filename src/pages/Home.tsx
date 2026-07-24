@@ -336,18 +336,28 @@ function HeroArtworkMorph({
   onFrameHoverChange?: (isHovered: boolean) => void;
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const paintedLayerRef = useRef<HTMLDivElement | null>(null);
+  const overlayLayerRef = useRef<HTMLDivElement | null>(null);
   const autoMorphTimeoutRef = useRef<number | null>(null);
   const autoMorphRafRef = useRef<number | null>(null);
-  const [revealProgress, setRevealProgress] = useState(0);
   const [isPointerInside, setIsPointerInside] = useState(false);
+  const revealProgressRef = useRef(0);
+  const pointerRevealTargetRef = useRef(0);
+  const pointerRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsPointerInside(false);
-    setRevealProgress(0);
+    revealProgressRef.current = 0;
+    pointerRevealTargetRef.current = 0;
+    if (pointerRafRef.current !== null) {
+      window.cancelAnimationFrame(pointerRafRef.current);
+      pointerRafRef.current = null;
+    }
+    applyReveal(0, false);
 
     autoMorphRafRef.current = window.requestAnimationFrame(() => {
       autoMorphTimeoutRef.current = window.setTimeout(() => {
-        setRevealProgress(1);
+        applyReveal(1, false);
         autoMorphTimeoutRef.current = null;
       }, 60);
     });
@@ -361,6 +371,10 @@ function HeroArtworkMorph({
         window.clearTimeout(autoMorphTimeoutRef.current);
         autoMorphTimeoutRef.current = null;
       }
+      if (pointerRafRef.current !== null) {
+        window.cancelAnimationFrame(pointerRafRef.current);
+        pointerRafRef.current = null;
+      }
     };
   }, [paintedSrc]);
 
@@ -368,19 +382,42 @@ function HeroArtworkMorph({
     onFrameHoverChange?.(isPointerInside);
   }, [isPointerInside, onFrameHoverChange]);
 
-  const progress = Math.max(0, Math.min(1, revealProgress));
-  const revealPercent = progress * 100;
-  const paintedClip = isPointerInside && enableManualCompare
-    ? `inset(0 ${100 - revealPercent}% 0 0)`
-    : revealDirection === 'rtl'
-      ? `inset(0 0 0 ${100 - revealPercent}%)`
-      : `inset(0 ${100 - revealPercent}% 0 0)`;
+  function applyReveal(nextProgress: number, manualMode: boolean) {
+    const clamped = Math.max(0, Math.min(1, nextProgress));
+    revealProgressRef.current = clamped;
+
+    const revealPercent = clamped * 100;
+    const paintedClip = manualMode
+      ? `inset(0 ${100 - revealPercent}% 0 0)`
+      : revealDirection === 'rtl'
+        ? `inset(0 0 0 ${100 - revealPercent}%)`
+        : `inset(0 ${100 - revealPercent}% 0 0)`;
+
+    if (paintedLayerRef.current) {
+      paintedLayerRef.current.style.clipPath = paintedClip;
+      paintedLayerRef.current.style.transition = manualMode
+        ? 'none'
+        : `clip-path ${HERO_MORPH_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out`;
+    }
+
+    if (overlayLayerRef.current) {
+      overlayLayerRef.current.style.opacity = manualMode ? '0.14' : `${0.08 + clamped * 0.2}`;
+      overlayLayerRef.current.style.transition = manualMode ? 'opacity 80ms linear' : 'opacity 0.9s ease-out';
+    }
+  }
 
   function updateRevealFromClientX(clientX: number) {
     if (!frameRef.current) return;
     const bounds = frameRef.current.getBoundingClientRect();
     const next = (clientX - bounds.left) / bounds.width;
-    setRevealProgress(Math.max(0, Math.min(1, next)));
+    pointerRevealTargetRef.current = Math.max(0, Math.min(1, next));
+
+    if (pointerRafRef.current !== null) return;
+
+    pointerRafRef.current = window.requestAnimationFrame(() => {
+      pointerRafRef.current = null;
+      applyReveal(pointerRevealTargetRef.current, true);
+    });
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -400,7 +437,11 @@ function HeroArtworkMorph({
   function handlePointerLeave() {
     if (!enableManualCompare) return;
     setIsPointerInside(false);
-    setRevealProgress(1);
+    if (pointerRafRef.current !== null) {
+      window.cancelAnimationFrame(pointerRafRef.current);
+      pointerRafRef.current = null;
+    }
+    applyReveal(1, false);
   }
 
   return (
@@ -418,24 +459,16 @@ function HeroArtworkMorph({
       />
 
       <div
+        ref={paintedLayerRef}
         className="absolute inset-0"
-        style={{
-          clipPath: paintedClip,
-          opacity: 1,
-          transition: isPointerInside && enableManualCompare
-            ? 'clip-path 120ms ease-out'
-            : `clip-path ${HERO_MORPH_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out`,
-        }}
+        style={{ opacity: 1 }}
       >
         <img src={paintedSrc} alt={alt} className="block h-full w-full scale-[1.01] object-cover" />
       </div>
 
       <div
+        ref={overlayLayerRef}
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,249,240,0.16),transparent_36%),linear-gradient(180deg,rgba(255,250,242,0.08),rgba(70,52,35,0.08))]"
-        style={{
-          opacity: isPointerInside && enableManualCompare ? 0.14 : 0.08 + progress * 0.2,
-          transition: isPointerInside && enableManualCompare ? 'opacity 140ms ease-out' : 'opacity 0.9s ease-out',
-        }}
       />
 
       <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(67,46,23,0.12)]" />

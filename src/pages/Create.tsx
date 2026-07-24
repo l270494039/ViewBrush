@@ -692,6 +692,7 @@ export default function Create({
     roomLabel: selectedRoom.label,
     roomImage: selectedRoom.image,
     note,
+    paymentPlan: 'full',
   };
   const feedbackHref = buildFeedbackMailto({
     conceptTitle: previewConcept.title,

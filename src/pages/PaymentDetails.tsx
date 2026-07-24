@@ -7,7 +7,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { getFinishLabel, getPresentationSummary, type FinishType } from '../data/presentationOptions';
-import { getBackButtonClasses, getButtonClasses, getHeadingFont, getInputClasses } from '../utils/theme';
+import { getBackButtonClasses, getButtonClasses, getHeadingFont } from '../utils/theme';
 
 export type PaymentDetailsPayload = {
   conceptTitle: string;
@@ -22,7 +22,16 @@ export type PaymentDetailsPayload = {
   roomLabel: string;
   roomImage: string;
   note: string;
+  paymentPlan: PaymentPlan;
 };
+
+export type PaymentPlan = 'full' | 'installments';
+
+const portraitPrice = 229;
+const frameFinishingPrice = 50;
+const orderTotal = portraitPrice + frameFinishingPrice;
+const installmentCount = 4;
+const installmentAmount = orderTotal / installmentCount;
 
 export function normalizePaymentDetailsPayload(raw: unknown): PaymentDetailsPayload | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -47,6 +56,7 @@ export function normalizePaymentDetailsPayload(raw: unknown): PaymentDetailsPayl
     roomLabel: typeof candidate.roomLabel === 'string' ? candidate.roomLabel : '',
     roomImage: typeof candidate.roomImage === 'string' ? candidate.roomImage : '',
     note: typeof candidate.note === 'string' ? candidate.note : '',
+    paymentPlan: candidate.paymentPlan === 'installments' ? 'installments' : 'full',
   };
 }
 
@@ -57,12 +67,12 @@ export default function PaymentDetails({
 }: {
   selection: PaymentDetailsPayload;
   onBack: () => void;
-  onContinueCheckout: () => void;
+  onContinueCheckout: (details: PaymentDetailsPayload) => void;
 }) {
-  const [email, setEmail] = useState('');
-  const [country, setCountry] = useState('United States');
+  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>(selection.paymentPlan ?? 'full');
   const [isMobileViewport, setIsMobileViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
   const presentationSummary = getPresentationSummary(selection.finishLabel, selection.finishType === 'framed' ? selection.frameLabel : null);
+  const selectedPlanCopy = paymentPlan === 'installments' ? `4 payments of ${formatMoney(installmentAmount)}` : `${formatMoney(orderTotal)} today`;
   const palette = {
     page: 'bg-[#f4ede3] text-[#2d241b]',
     surface: 'bg-[#fbf7f0] border-[#dccfbc]',
@@ -79,6 +89,12 @@ export default function PaymentDetails({
 
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
+
+  useEffect(() => {
+    setPaymentPlan(selection.paymentPlan ?? 'full');
+  }, [selection.paymentPlan]);
+
+  const handleContinueCheckout = () => onContinueCheckout({ ...selection, paymentPlan });
 
   return (
     <div className={`min-h-screen w-full ${palette.page}`}>
@@ -163,48 +179,47 @@ export default function PaymentDetails({
                 <h2 className={`mt-2 text-3xl ${getHeadingFont()}`}>Order summary</h2>
 
                 <div className="mt-6 space-y-3 border-y border-black/8 py-5 text-sm">
-                  <PriceRow label="Portrait package" value="$279" />
+                  <PriceRow label="Hand-painted portrait" value={formatMoney(portraitPrice)} />
+                  <PriceRow label="Frame finishing" value={formatMoney(frameFinishingPrice)} />
                   <PriceRow label="Protected shipping" value="Included" />
                 </div>
 
                 <div className="mt-4 flex items-end justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.24em] opacity-55">Total</p>
-                    <p className="mt-1 text-4xl font-semibold">$279</p>
+                    <p className="mt-1 text-4xl font-semibold">{formatMoney(orderTotal)}</p>
                   </div>
                   <div className={`px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${palette.accentSoft}`}>
                     Secure checkout next
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-4">
-                  <div>
-                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] opacity-55">Email for order updates</label>
-                    <input
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="you@example.com"
-                      className={getInputClasses('bg-transparent')}
+                <div className="mt-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] opacity-55">Payment option</p>
+                  <div className="mt-3 grid gap-3">
+                    <PaymentPlanButton
+                      title="Pay in full"
+                      description="One secure payment before painting begins."
+                      amount={`${formatMoney(orderTotal)} today`}
+                      active={paymentPlan === 'full'}
+                      onClick={() => setPaymentPlan('full')}
+                    />
+                    <PaymentPlanButton
+                      title="Pay over time"
+                      description="Split the portrait into four interest-free payments."
+                      amount={`4 x ${formatMoney(installmentAmount)}`}
+                      active={paymentPlan === 'installments'}
+                      onClick={() => setPaymentPlan('installments')}
                     />
                   </div>
-                  <div>
-                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] opacity-55">Shipping country</label>
-                    <select
-                      value={country}
-                      onChange={(event) => setCountry(event.target.value)}
-                      className={getInputClasses('bg-transparent')}
-                    >
-                      <option>United States</option>
-                      <option>Canada</option>
-                      <option>United Kingdom</option>
-                      <option>Australia</option>
-                      <option>Germany</option>
-                    </select>
-                  </div>
+                  <p className="mt-3 text-xs font-medium text-[#6e6254]">{selectedPlanCopy}</p>
                 </div>
 
                 {!isMobileViewport && (
-                  <button onClick={onContinueCheckout} className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm')} gap-2`}>
+                  <button
+                    onClick={handleContinueCheckout}
+                    className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm')} gap-2`}
+                  >
                     <CreditCard size={16} />
                     Continue to Secure Payment
                     <ArrowRight size={16} />
@@ -219,7 +234,10 @@ export default function PaymentDetails({
       {isMobileViewport && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#DCCFBC] bg-[#FBF8F3]/96 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-18px_40px_rgba(36,28,20,0.12)] backdrop-blur-xl">
           <div className="mx-auto w-full max-w-[680px]">
-            <button onClick={onContinueCheckout} className={`${getButtonClasses('primary', 'flex w-full items-center justify-center gap-2 py-4 text-sm')}`}>
+            <button
+              onClick={handleContinueCheckout}
+              className={`${getButtonClasses('primary', 'flex w-full items-center justify-center gap-2 py-4 text-sm')}`}
+            >
               <CreditCard size={16} />
               Continue to Secure Payment
               <ArrowRight size={16} />
@@ -247,6 +265,44 @@ function PriceRow({ label, value }: { label: string; value: string }) {
       <span className="font-medium">{value}</span>
     </div>
   );
+}
+
+function PaymentPlanButton({
+  title,
+  description,
+  amount,
+  active,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  amount: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center justify-between gap-4 rounded-[4px] border px-4 py-3 text-left transition ${
+        active ? 'border-[#31271F] bg-[#f3ebde]' : 'border-[#dccfbc] bg-white/70 hover:border-[#cbb79c]'
+      }`}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-[#2d241b]">{title}</span>
+        <span className="mt-1 block text-xs leading-5 text-[#75695c]">{description}</span>
+      </span>
+      <span className="shrink-0 text-right text-sm font-semibold text-[#2d241b]">{amount}</span>
+    </button>
+  );
+}
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
 }
 
 function ArtworkFrame({
