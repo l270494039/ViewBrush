@@ -221,6 +221,7 @@ function AccountHero({
   onOpenOrders: () => void;
   onSignOut: () => void;
 }) {
+  const hasOrder = Boolean(latestOrder);
   const stats = [
     { label: 'Saved Artwork', value: savedSelection ? '1' : '0', onClick: onOpenCart },
     { label: 'Orders', value: latestOrder ? '1' : '0', onClick: onOpenOrders },
@@ -233,7 +234,9 @@ function AccountHero({
         <div>
           <h1 className="text-[42px] font-semibold leading-[1.08] text-[#241C16]">Welcome back, {customer.firstName}</h1>
           <p className="mt-4 max-w-[58ch] text-base leading-7 text-[#5F564B]">
-            Manage your artwork bag, account details, order history, and support requests from one place.
+            {hasOrder
+              ? `Your order workspace is saved under ${customer.email}. Track artwork progress, approval, shipping, and support from here.`
+              : 'Manage your artwork bag, account details, order history, and support requests from one place.'}
           </p>
           <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#5F564B]">
             <span className="font-semibold text-[#241C16]">{getMockCustomerName(customer)}</span>
@@ -912,6 +915,9 @@ function Orders({
             <OrderMeta label="Payment" value={paymentStatus} />
             <OrderMeta label="Delivery" value={order.deliveryOption === 'express' ? 'Express' : 'Standard'} />
             <OrderMeta label="Total" value={`$${order.total}`} />
+          </div>
+          <div className="mt-4 rounded-[8px] border border-[#E5DCCF] bg-[#FBF8F3] px-4 py-3 text-sm leading-6 text-[#5F564B]">
+            Order access is linked to <span className="font-semibold text-[#241C16]">{order.email}</span>.
           </div>
         </div>
 

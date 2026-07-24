@@ -42,20 +42,20 @@ export default function OrderSuccess({
               Your portrait is officially in the studio queue.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[#6e6254]">
-              We received your order and locked the approved preview direction. The next update will arrive by email as soon as the first artist pass begins.
+              We received your order and saved it under {order.email || 'your checkout email'}. You can view the order from this confirmation page, the Account icon, or the confirmation email.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <SuccessCard icon={Sparkles} title="Order received" body={`Order ${orderNumber} is confirmed and secured.`} />
-              <SuccessCard icon={PackageCheck} title="Studio prep next" body="Your approved preview is being prepared for the artist team." />
+              <SuccessCard icon={PackageCheck} title="Order workspace ready" body="A secure order workspace has been opened for this checkout email." />
               <SuccessCard icon={Truck} title="Shipping later" body={`Delivery method locked: ${order.deliveryOption === 'express' ? 'Express' : 'Standard'}.`} />
             </div>
 
             <div className="mt-8 rounded-[2px] border border-[#e6dbcf] bg-[#fbf7f0] p-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8f816c]">What happens next</p>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <TimelineStep index="01" title="Confirmation email" body={`Sent to ${order.email || 'your inbox'} with the order summary.`} />
-                <TimelineStep index="02" title="Artist preparation" body="The studio reviews the preview, note, presentation, and size selections." />
+                <TimelineStep index="01" title="Confirmation email" body={`Sent to ${order.email || 'your inbox'} with the order summary and order access.`} />
+                <TimelineStep index="02" title="Order tracking" body="Open My Orders to review artwork progress, portrait approval, gift message, and shipping details." />
                 <TimelineStep index="03" title="Painting & delivery" body="We complete the artwork and send tracking once it ships." />
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function OrderSuccess({
 
               <div className="mt-6 flex flex-col gap-3">
                 <button onClick={onViewAccount} className={`${getButtonClasses('primary', 'w-full justify-center py-4 text-sm')} gap-2`}>
-                  View Order In Account
+                  View My Order
                   <ArrowRight size={16} />
                 </button>
                 <button onClick={onCreateAnother} className={`${getButtonClasses('outline', 'w-full justify-center py-4 text-sm')}`}>

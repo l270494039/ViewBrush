@@ -24,6 +24,7 @@ type AccountEntryView = 'account' | 'orders';
 
 const cartStorageKey = 'viewbrush-saved-artwork';
 const accountOrderStorageKey = 'viewbrush-latest-order';
+const mockAccountSignedOutStorageKey = 'viewbrush-mock-account-signed-out';
 const maxStoredImageLength = 120_000;
 
 const routeHashMap: Record<AppRoute, string> = {
@@ -110,10 +111,21 @@ function getSavedMockCustomer(): MockCustomer | null {
   if (typeof window === 'undefined') return null;
 
   try {
+    if (window.localStorage.getItem(mockAccountSignedOutStorageKey) === 'true') return null;
     const savedCustomer = window.localStorage.getItem(mockAccountStorageKey);
     return savedCustomer ? { ...defaultMockCustomer, ...JSON.parse(savedCustomer) } : null;
   } catch {
     return null;
+  }
+}
+
+function getSavedMockAccountSignedOut() {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    return window.localStorage.getItem(mockAccountSignedOutStorageKey) === 'true';
+  } catch {
+    return false;
   }
 }
 
@@ -171,6 +183,7 @@ function AppContent() {
   const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(() => getSavedLatestOrder()?.order ?? null);
   const [cartResetKey, setCartResetKey] = useState(0);
   const [mockCustomer, setMockCustomer] = useState<MockCustomer | null>(() => getSavedMockCustomer());
+  const [hasSignedOut, setHasSignedOut] = useState(() => getSavedMockAccountSignedOut());
   const [accountEntryView, setAccountEntryView] = useState<AccountEntryView>('account');
   const isStudioRoute = route === 'create' || route === 'details' || route === 'checkout' || route === 'success';
 
@@ -241,16 +254,18 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (!isRouteReady || route !== 'account' || mockCustomer) return;
+    if (!isRouteReady || route !== 'account' || mockCustomer || hasSignedOut) return;
 
     if (latestOrder) {
       const recoveredCustomer = createMockCustomerFromEmail(latestOrder.order.email);
+      setHasSignedOut(false);
       setMockCustomer(recoveredCustomer);
+      window.localStorage.removeItem(mockAccountSignedOutStorageKey);
       window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(recoveredCustomer));
       return;
     }
 
-  }, [isRouteReady, latestOrder, mockCustomer, route]);
+  }, [hasSignedOut, isRouteReady, latestOrder, mockCustomer, route]);
 
   const saveCartSelection = (selection: PaymentDetailsPayload) => {
     setPaymentDetails(selection);
@@ -266,13 +281,18 @@ function AppContent() {
 
   const handleMockSignIn = (customer: MockCustomer) => {
     setAccountEntryView('account');
+    setHasSignedOut(false);
     setMockCustomer(customer);
+    window.localStorage.removeItem(mockAccountSignedOutStorageKey);
     window.localStorage.setItem(mockAccountStorageKey, JSON.stringify(customer));
     navigate('account');
   };
 
   const handleMockSignOut = () => {
+    setAccountEntryView('account');
+    setHasSignedOut(true);
     setMockCustomer(null);
+    window.localStorage.setItem(mockAccountSignedOutStorageKey, 'true');
     window.localStorage.removeItem(mockAccountStorageKey);
     navigate('cart');
   };
@@ -289,7 +309,7 @@ function AppContent() {
         <Navbar
           currentRoute={route}
           hasCartItems={Boolean(cartSelection)}
-          hasAccountNotifications={Boolean(latestOrder)}
+          hasAccountNotifications={Boolean(latestOrder) && !hasSignedOut}
           onNavigate={handleNavigate}
         />
       )}
@@ -326,7 +346,7 @@ function AppContent() {
             onSignOut={handleMockSignOut}
           />
         )}
-        {route === 'account' && !mockCustomer && !latestOrder && (
+        {route === 'account' && !mockCustomer && (
           <Cart
             selection={null}
             resetKey={cartResetKey}
@@ -378,9 +398,11 @@ function AppContent() {
                 setPaymentDetails(orderSnapshot.selection);
                 setCheckoutOrder(submission);
                 setLatestOrder(orderSnapshot);
+                setHasSignedOut(false);
                 setMockCustomer(nextCustomer);
                 setAccountEntryView('orders');
                 setCartSelection(null);
+                window.localStorage.removeItem(mockAccountSignedOutStorageKey);
                 setLocalStorageItem(mockAccountStorageKey, JSON.stringify(nextCustomer));
                 setLocalStorageItem(accountOrderStorageKey, JSON.stringify(storageOrderSnapshot));
                 window.localStorage.removeItem(cartStorageKey);
