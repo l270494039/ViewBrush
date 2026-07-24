@@ -81,6 +81,10 @@ function getArtworkImage(selection: PaymentDetailsPayload) {
   return selection.conceptImage || selection.sourceImage;
 }
 
+function isCompletedOrderStage(orderStage?: OrderStage) {
+  return orderStage === 'shipping' || orderStage === 'complete';
+}
+
 function getOrderStatusBadgeClasses(orderStage: OrderStage) {
   const baseClasses = 'mt-4 inline-flex rounded-[8px] border px-3 py-2 text-xs font-semibold';
 
@@ -112,6 +116,7 @@ export default function Account({
 }) {
   const [activeView, setActiveView] = useState<AccountView>(initialView);
   const [accountPanel, setAccountPanel] = useState<AccountPanel>('overview');
+  const viewSwitchRef = useRef<HTMLDivElement | null>(null);
   const [profile, setProfile] = useState<MockCustomer>(customer);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [addresses, setAddresses] = useState<Partial<Record<AddressKind, AddressRecord>>>({});
@@ -120,16 +125,32 @@ export default function Account({
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const latestOrder = accountOrders[0] ?? null;
   const latestOrderNumber = useMemo(() => buildOrderNumber(latestOrder), [latestOrder]);
-  const openView = (view: AccountView) => {
+  const completedOrderCount = useMemo(
+    () => accountOrders.filter((accountOrder) => isCompletedOrderStage(accountOrder.orderStage)).length,
+    [accountOrders]
+  );
+  const scrollToViewSwitch = () => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+
+    window.requestAnimationFrame(() => {
+      if (!viewSwitchRef.current) return;
+      const top = viewSwitchRef.current.getBoundingClientRect().top + window.scrollY - 76;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    });
+  };
+
+  const openView = (view: AccountView, options?: { revealTabs?: boolean }) => {
     setActiveView(view);
     if (view !== 'account') setAccountPanel('overview');
+    if (options?.revealTabs) scrollToViewSwitch();
   };
 
   useEffect(() => {
     openView(initialView);
   }, [initialView]);
 
-  const openOrders = () => openView('orders');
+  const openOrders = () => openView('orders', { revealTabs: true });
 
   return (
     <div className="min-h-screen bg-[#FBF8F3] pt-16 text-[#2D241B]">
@@ -138,13 +159,14 @@ export default function Account({
           customer={profile}
           savedSelection={savedSelection}
           orderCount={accountOrders.length}
+          completedOrderCount={completedOrderCount}
           onCreate={onCreate}
           onOpenCart={onOpenCart}
           onOpenOrders={openOrders}
           onSignOut={onSignOut}
         />
 
-        <div className="mt-8">
+        <div ref={viewSwitchRef} className="mt-8">
           <AccountViewSwitch activeView={activeView} onSelect={openView} />
 
           <section className="mt-8 min-w-0">
@@ -204,6 +226,7 @@ function AccountHero({
   customer,
   savedSelection,
   orderCount,
+  completedOrderCount,
   onCreate,
   onOpenCart,
   onOpenOrders,
@@ -212,6 +235,7 @@ function AccountHero({
   customer: MockCustomer;
   savedSelection: PaymentDetailsPayload | null;
   orderCount: number;
+  completedOrderCount: number;
   onCreate: () => void;
   onOpenCart: () => void;
   onOpenOrders: () => void;
@@ -221,7 +245,7 @@ function AccountHero({
   const stats = [
     { label: 'Saved Artwork', value: savedSelection ? '1' : '0', onClick: onOpenCart },
     { label: 'Orders', value: String(orderCount), onClick: onOpenOrders },
-    { label: 'Completed Orders', value: String(orderCount), onClick: onOpenOrders },
+    { label: 'Completed Orders', value: String(completedOrderCount), onClick: onOpenOrders },
   ];
 
   return (
@@ -1165,7 +1189,23 @@ function ReviewPortraitModal({
 }) {
   const artworkImage = getArtworkImage(selection);
   const [previewMode, setPreviewMode] = useState<ReviewPreviewMode>('artwork');
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+  const [mobilePreviewAsset, setMobilePreviewAsset] = useState<{ label: string; image: string | null } | null>(null);
   const previewImage = previewMode === 'detail' ? selection.sourceImage : artworkImage;
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
+
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
+  const openAssetPreview = (label: string, asset: string | null) => {
+    if (!asset) return;
+    setMobilePreviewAsset({ label, image: asset });
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#241C16]/58 px-4 py-6 backdrop-blur-sm">
@@ -1178,16 +1218,36 @@ function ReviewPortraitModal({
         </div>
         <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.25fr)_380px] lg:p-8">
           <div>
-            <ZoomableReviewPreview
-              alt={selection.conceptTitle}
-              image={previewImage}
-              isVideo={previewMode === 'video'}
-              videoSrc={generationMotionVideo}
-            />
+            {!isMobileViewport && (
+              <ZoomableReviewPreview
+                alt={selection.conceptTitle}
+                image={previewImage}
+                isVideo={previewMode === 'video'}
+                videoSrc={generationMotionVideo}
+              />
+            )}
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <ReviewThumb label="Artwork Photo" icon={<ZoomIn size={24} />} image={artworkImage} isSelected={previewMode === 'artwork'} onSelect={() => setPreviewMode('artwork')} />
-              <ReviewThumb label="Detail View" icon={<ZoomIn size={24} />} image={selection.sourceImage} isSelected={previewMode === 'detail'} onSelect={() => setPreviewMode('detail')} />
-              <ReviewThumb label="Studio Video" icon={<PlayCircle size={28} />} image={artworkImage} isSelected={previewMode === 'video'} onSelect={() => setPreviewMode('video')} />
+              <ReviewThumb
+                label="Artwork Photo"
+                icon={<ZoomIn size={24} />}
+                image={artworkImage}
+                isSelected={!isMobileViewport && previewMode === 'artwork'}
+                onSelect={() => (isMobileViewport ? openAssetPreview('Artwork Photo', artworkImage) : setPreviewMode('artwork'))}
+              />
+              <ReviewThumb
+                label="Detail View"
+                icon={<ZoomIn size={24} />}
+                image={selection.sourceImage}
+                isSelected={!isMobileViewport && previewMode === 'detail'}
+                onSelect={() => (isMobileViewport ? openAssetPreview('Detail View', selection.sourceImage) : setPreviewMode('detail'))}
+              />
+              <ReviewThumb
+                label="Studio Video"
+                icon={<PlayCircle size={28} />}
+                image={artworkImage}
+                isSelected={!isMobileViewport && previewMode === 'video'}
+                onSelect={() => (isMobileViewport ? openAssetPreview('Studio Video', artworkImage) : setPreviewMode('video'))}
+              />
             </div>
           </div>
           <aside className="space-y-6">
@@ -1211,6 +1271,33 @@ function ReviewPortraitModal({
           </aside>
         </div>
       </div>
+
+      {isMobileViewport && mobilePreviewAsset?.image && (
+        <div className="fixed inset-0 z-[60] bg-[#241C16]/92 backdrop-blur-sm">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 text-white">
+              <p className="text-sm font-semibold">{mobilePreviewAsset.label}</p>
+              <button
+                type="button"
+                onClick={() => setMobilePreviewAsset(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-[8px] border border-white/12 bg-white/6 transition hover:bg-white/12"
+                aria-label="Close image preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <div className="flex min-h-full items-center justify-center">
+                <img
+                  src={mobilePreviewAsset.image}
+                  alt={mobilePreviewAsset.label}
+                  className="block h-auto w-auto max-w-none rounded-[8px] shadow-[0_24px_60px_rgba(0,0,0,0.35)]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
