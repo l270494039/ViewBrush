@@ -300,7 +300,7 @@ const styleSampleLibrary: Record<PortraitStyleId, { heading: string; description
 };
 
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-const MIN_GENERATION_DISPLAY_MS = 10000;
+const MIN_GENERATION_DISPLAY_MS = 5000;
 const GENERATED_PREVIEW_SCALE = 1.14;
 const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() ?? '';
 const getViewportBoundArtworkStyle = (widthPercent: number, maxWidth: number): React.CSSProperties => ({

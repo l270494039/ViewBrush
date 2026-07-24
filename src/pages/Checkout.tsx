@@ -293,7 +293,7 @@ export default function Checkout({
                     })
                   }
                   disabled={!canSubmit}
-                  className={`${getButtonClasses('primary', 'w-full justify-center py-4 text-sm')} gap-2`}
+                  className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm')} gap-2`}
                 >
                   <Wallet size={16} />
                   Complete Order

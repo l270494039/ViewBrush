@@ -204,7 +204,7 @@ export default function PaymentDetails({
                 </div>
 
                 {!isMobileViewport && (
-                  <button onClick={onContinueCheckout} className={`${getButtonClasses('primary', 'w-full justify-center py-4 text-sm')} gap-2`}>
+                  <button onClick={onContinueCheckout} className={`${getButtonClasses('primary', 'mt-5 w-full justify-center py-4 text-sm')} gap-2`}>
                     <CreditCard size={16} />
                     Continue to Secure Payment
                     <ArrowRight size={16} />

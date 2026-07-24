@@ -22,10 +22,12 @@ const utilityItems = [
 export default function Navbar({
   currentRoute,
   hasCartItems,
+  hasAccountNotifications,
   onNavigate,
 }: {
   currentRoute: NavRoute | 'materials';
   hasCartItems: boolean;
+  hasAccountNotifications: boolean;
   onNavigate: (r: NavRoute | 'materials') => void;
 }) {
   const ctaLabel = 'Create Artwork';
@@ -85,13 +87,14 @@ export default function Navbar({
               type="button"
               aria-label="Account"
               onClick={() => onNavigate('account')}
-              className={`hidden transition-colors lg:inline-flex ${
+              className={`relative hidden transition-colors lg:inline-flex ${
                 currentRoute === 'account'
                   ? 'text-[#31271F]'
                   : 'text-[#5F564A]/88 hover:text-[#31271F]'
               }`}
             >
               <User size={18} />
+              {hasAccountNotifications && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#D12B2B]" />}
             </button>
             <button
               type="button"
@@ -173,6 +176,7 @@ export default function Navbar({
                   <span className="relative inline-flex items-center gap-3">
                     <Icon size={16} className="text-[#6B6155]" />
                     <span>{label}</span>
+                    {label === 'Account' && hasAccountNotifications && <span className="h-2 w-2 rounded-full bg-[#D12B2B]" />}
                     {label === 'Cart' && hasCartItems && <span className="h-2 w-2 rounded-full bg-[#D12B2B]" />}
                   </span>
                 </button>

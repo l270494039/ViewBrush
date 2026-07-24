@@ -136,10 +136,10 @@ function createMockCustomerFromEmail(email: string): MockCustomer {
 function AppContent() {
   const [route, setRoute] = useState<AppRoute>('create');
   const [isRouteReady, setIsRouteReady] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsPayload | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection() ?? getSavedLatestOrder()?.selection ?? null);
   const [cartSelection, setCartSelection] = useState<PaymentDetailsPayload | null>(() => getSavedCartSelection());
   const [latestOrder, setLatestOrder] = useState<AccountOrderSnapshot | null>(() => getSavedLatestOrder());
-  const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(null);
+  const [checkoutOrder, setCheckoutOrder] = useState<CheckoutSubmission | null>(() => getSavedLatestOrder()?.order ?? null);
   const [cartResetKey, setCartResetKey] = useState(0);
   const [mockCustomer, setMockCustomer] = useState<MockCustomer | null>(() => getSavedMockCustomer());
   const [accountEntryView, setAccountEntryView] = useState<AccountEntryView>('account');
@@ -198,6 +198,11 @@ function AppContent() {
     navigate('account');
   };
 
+  const detailsSelection = paymentDetails ?? cartSelection ?? null;
+  const checkoutSelection = paymentDetails ?? cartSelection ?? latestOrder?.selection ?? null;
+  const successSelection = paymentDetails ?? latestOrder?.selection ?? null;
+  const successOrder = checkoutOrder ?? latestOrder?.order ?? null;
+
   const handleNavigate = (nextRoute: AppRoute) => {
     if (nextRoute === 'account') {
       navigateToAccount('account');
@@ -251,7 +256,14 @@ function AppContent() {
 
   return (
     <div className={`transition-colors duration-500 flex flex-col ${isCartRoute ? 'min-h-screen bg-[#FBF8F3]' : `min-h-screen ${getBgClasses('main')}`}`}>
-      {!isStudioRoute && <Navbar currentRoute={route} hasCartItems={Boolean(cartSelection)} onNavigate={handleNavigate} />}
+      {!isStudioRoute && (
+        <Navbar
+          currentRoute={route}
+          hasCartItems={Boolean(cartSelection)}
+          hasAccountNotifications={Boolean(latestOrder)}
+          onNavigate={handleNavigate}
+        />
+      )}
       <main className="relative flex w-full flex-1 flex-col">
         {route === 'home' && <Home onNavigate={navigate} />}
         {route === 'about' && <About onNavigate={navigate} />}
@@ -313,8 +325,8 @@ function AppContent() {
           />
         )}
         {route === 'details' &&
-          (paymentDetails ? (
-            <PaymentDetails selection={paymentDetails} onBack={() => navigate('create')} onContinueCheckout={() => navigate('checkout')} />
+          (detailsSelection ? (
+            <PaymentDetails selection={detailsSelection} onBack={() => navigate('create')} onContinueCheckout={() => navigate('checkout')} />
           ) : (
             <Create
               onNavigate={navigate}
@@ -326,13 +338,14 @@ function AppContent() {
             />
           ))}
         {route === 'checkout' &&
-          (paymentDetails ? (
+          (checkoutSelection ? (
             <Checkout
-              selection={paymentDetails}
+              selection={checkoutSelection}
               onBack={() => navigate('details')}
               onComplete={(submission) => {
-                const orderSnapshot = { selection: paymentDetails, order: submission };
+                const orderSnapshot = { selection: checkoutSelection, order: submission };
                 const nextCustomer = mockCustomer ?? createMockCustomerFromEmail(submission.email);
+                setPaymentDetails(orderSnapshot.selection);
                 setCheckoutOrder(submission);
                 setLatestOrder(orderSnapshot);
                 setMockCustomer(nextCustomer);
@@ -355,11 +368,11 @@ function AppContent() {
             />
           ))}
         {route === 'success' &&
-          paymentDetails &&
-          checkoutOrder && (
+          successSelection &&
+          successOrder && (
             <OrderSuccess
-              selection={paymentDetails}
-              order={checkoutOrder}
+              selection={successSelection}
+              order={successOrder}
               onReturnHome={() => {
                 setCheckoutOrder(null);
                 setPaymentDetails(null);
